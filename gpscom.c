@@ -1,10 +1,10 @@
-/////////////////////////////////////
-//Zach Norris					//
+//////////////////////////////////
+//Zach Norris			//
 //This file provides to code to	//
-//initialize the GPS chip and		//
-//to communicate with the GPS		//
-//chip						//
-/////////////////////////////////////
+//initialize the GPS chip and	//
+//to communicate with the GPS	//
+//chip				//
+//////////////////////////////////
 
 #include <stdio.h>
 #include <avr/io.h>
@@ -30,15 +30,15 @@ int main(int argc, char* argv[])
 void init_serial(void)
 {
 	UBRRH=0;
-	UBRRL=12; 					// 4800 BAUD FOR 1MHZ SYSTEM CLOCK
-	UCSRC= (1<<URSEL)|(1<<USBS)|(3<<UCSZ0) ;  // 8 BIT NO PARITY 2 STOP
+	UBRRL=12; 				// 4800 BAUD FOR 1MHZ SYSTEM CLOCK
+	UCSRC= (1<<URSEL)|(1<<USBS)|(3<<UCSZ0) ;// 8 BIT NO PARITY 2 STOP
 	UCSRB=(1<<RXEN)|(1<<TXEN)  ; 		//ENABLE TX AND RX ALSO 8 BIT
 }
 
 void tx_byte(char data)
 {
-	while((UCSRA&(1<<UDRE)) == 0);	//wait if byte is being transmitted
-	UDR = data;					//send byte
+	while((UCSRA&(1<<UDRE)) == 0);		//wait if byte is being transmitted
+	UDR = data;				//send byte
 }
 
 void tx_str(char * string)
