@@ -1,7 +1,7 @@
 #ifndef _GPSCOM_H
 #define _GPSCOM_H
 
-struct gps_loc {
+struct gps_location {
 	float time;		//time of GPS data query hhmmss.sss
 	char status;		//A=valid V=invalid
 	float lat;		//lattitude ddmm.mmmm
@@ -14,5 +14,7 @@ struct gps_loc {
 };
 
 int logdata(char * data, struct gps_loc* loc);
+uint32_t gps_calc_disp(struct gps_location * gps0, struct gps_location * gps1);
+float dm_to_dd(float dm);	//lat ddmm.mmmm and lon dddmm.mmmm to decimal degrees 
 
 #endif
