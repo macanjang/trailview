@@ -13,8 +13,21 @@ struct gps_location {
 	int date;		//ddmmyy
 };
 
-int logdata(char * data, struct gps_loc* loc);
-uint32_t gps_calc_disp(struct gps_location * gps0, struct gps_location * gps1);
+/*This function takes a data string
+ *parses it and places it into the 
+ *provided gps_location structure
+ */
+int gps_log_data(char * data, struct gps_location* loc);
+
+/*This function takes the latitudes and longitudes
+ *of two GPS locations and returns the displacement
+ *using the Vincenty formula, accurate to .5 mm
+ */
+uint32_t gps_calc_disp(float lat1, float lon1, float lat2, float lon2);
+
+/*This function converts a lattitude (ddmm.mmmm)
+ *or longitude dddmm.mmmm to decimal degrees
+ */
 float dm_to_dd(float dm);	//lat ddmm.mmmm and lon dddmm.mmmm to decimal degrees 
 
 #endif
