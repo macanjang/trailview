@@ -1,0 +1,6 @@
+#!/bin/sh
+cp ./* ../backup
+hg pull -u
+hg merge
+hg commit -m "$1"
+hg push
