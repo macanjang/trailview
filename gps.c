@@ -11,10 +11,11 @@
 #include <avr/iom8.h>
 #include <string.h>
 #include "gpscom.h"
+#include <inttypes.h>
 
 #define PLENGTH 10
 
-int logdata(char * data, struct gps_loc* loc)
+int gps_log_data(char * data, struct gps_location* loc)
 {
 	int i = 0;
 	int j = 0;
@@ -63,4 +64,21 @@ int logdata(char * data, struct gps_loc* loc)
 		field++;
 	}
 	return 0;
+}
+
+uint32_t gps_calc_disp(struct gps_location gps0, struct gps_location gps1)
+{
+	float lat0 = dm_to_dd(gps0.lat);
+	float lon0 = dm_to_dd(gps0.lon);
+	float lat1 = dm_to_dd(gps1.lat);
+	float lon1 = dm_to_dd(gps1.lon);
+	
+	
+}
+
+float dm_to_dd(float dm)
+{
+	float dd = floor(dm/100);		//get rid of minutes
+	float mm = (dm - dd * 100) / 60;	//get rid of degrees and convert to decimal deg
+	return (mm + dd);			//add em up and return
 }
