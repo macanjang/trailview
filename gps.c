@@ -14,6 +14,7 @@
 #include <inttypes.h>
 
 #define PLENGTH 10
+#define sq(a) ((a)*(a))
 
 int gps_log_data(char * data, struct gps_location* loc)
 {
@@ -66,14 +67,46 @@ int gps_log_data(char * data, struct gps_location* loc)
 	return 0;
 }
 
-uint32_t gps_calc_disp(struct gps_location gps0, struct gps_location gps1)
+uint32_t gps_calc_disp(float lat1, float lon1, float lat2, float lon2)
 {
-	float lat0 = dm_to_dd(gps0.lat);
-	float lon0 = dm_to_dd(gps0.lon);
-	float lat1 = dm_to_dd(gps1.lat);
-	float lon1 = dm_to_dd(gps1.lon);
+	lat1 = dm_to_dd(lat1);
+	lon1 = dm_to_dd(lon1);
+	lat2 = dm_to_dd(lat2);
+	lon2 = dm_to_dd(lon2);
 	
+	float a = 6378137;
+	float b = 6356752.3142;
+	float f = 1/298.257223563;		//flatening of geoid;
+	float dlon = (lon2 - lon1) * M_PI / 180;	//difference in longitude in radians
+	float s1 = sin(atan2((1 - f) * tan(lat1 * M_PI / 180)));	//sin of reduced lat1
+	float c1 = cos(atan2((1 - f) * tan(lat1 * M_PI / 180)));	//cos of reduced lon1
+	float s2 = sin(atan2((1 - f) * tan(lat2 * M_PI / 180)));	//sin of reduced lat2
+	float c2 = cos(atan2((1 - f) * tan(lat2 * M_PI / 180)));	//cos of reduced lon2
 	
+	float lambda = dlon;
+	float ltemp, sigma, ss, cs, sa, ca, csqa, C, usq, A, B, ds;
+	int8_t lim = 0;
+	
+	do {
+		ss = sqrt(sq(c2 * sin(lambda)) + sq(c1 * s2 - s1 * c2 * cos(lambda)));	//sin(sigma)
+		cs = s1 * s2 + c1 * c2 * cos(lambda);			//cos(sigma)
+		sigma = atan2(ss , cs);
+		sa = c1 * c2 * sin(lambda) / ss;			//sin(alpha)
+		csqa = 1 - sq(sa);					//cos_squared(alpha)
+		c2sm = cs - 2 * s1 * s2 / csqa;				//cos(2sigma_m)
+		C = f / 16 * csqa * (4 + f * (4 − 3 * csqa));		//intermediate value
+		ltemp = lambda;						//store old value of lambda
+		lambda = L + (1 − C) * f * sa * (sigma + C * ss * (c2sm + C * cs * ( −1 + 2 * sq(c2sm))));	//get new value
+	} while (abs(lambda - ltemp) > 1e-12 && lim++ < 50);		//check for accuracy or too many iterations
+	
+	if (lim == 50) return -1;
+	
+	usq = csqa * (sq(a) - sq(b)) / sq(b);				//u squared
+	A = 1 + usq / 16384 * (4096 + usq * (-768 + usq * (320 - 175 * usq)));	//intermediate value
+	B = usq / 1024 * (256 + usq * (-128 + usq * (74 - 47 * usq)));	//intermediate value
+	ds = B * ss * (c2sm + B / 4 * (cs * (-1 + 2 * sq(c2sm)) - B / 6 * c2sm * (−3 + 4 * sq(ss)) * (−3 + 4 * sq(c2sm)))); //delta sigma
+	
+	return b * A * (sigma - ds);					//displacement
 }
 
 float dm_to_dd(float dm)
