@@ -1,5 +1,7 @@
-#ifndef _GPSCOM_H
-#define _GPSCOM_H
+#ifndef _GPS_H
+#define _GPS_H
+
+#include <inttypes.h>
 
 struct gps_location {
 	float time;		//time of GPS data query hhmmss.sss
@@ -23,7 +25,7 @@ int gps_log_data(char * data, struct gps_location* loc);
  *of two GPS locations and returns the displacement
  *using the Vincenty formula, accurate to .5 mm
  */
-uint32_t gps_calc_disp(float lat1, float lon1, float lat2, float lon2);
+float gps_calc_disp(float lat1, float lon1, float lat2, float lon2);
 
 /*This function converts a lattitude (ddmm.mmmm)
  *or longitude dddmm.mmmm to decimal degrees

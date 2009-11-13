@@ -7,11 +7,13 @@
 //////////////////////////////////
 
 #include <stdio.h>
-#include <avr/io.h>
-#include <avr/iom8.h>
+//#include <avr/io.h>
+//#include <avr/iom8.h>
 #include <string.h>
-#include "gpscom.h"
+#include "gps.h"
 #include <inttypes.h>
+#include <math.h>
+#include <stdlib.h>
 
 #define PLENGTH 10
 #define sq(a) ((a)*(a))
@@ -35,31 +37,31 @@ int gps_log_data(char * data, struct gps_location* loc)
 				if (strcmp("$GPRMC",temp)) return -1;
 				break;
 			case 1:			//then fill in all the fields of the gps location
-				loc.time = atof(temp);
+				loc->time = atof(temp);
 				break;
 			case 2:
-				loc.status = *temp;
+				loc->status = *temp;
 				break;
 			case 3:
-				loc.lat = atof(temp);
+				loc->lat = atof(temp);
 				break;
 			case 4:
-				loc.ns = *temp;
+				loc->ns = *temp;
 				break;
 			case 5:
-				loc.lon = atof(temp);
+				loc->lon = atof(temp);
 				break;
 			case 6:
-				loc.ew = *temp;
+				loc->ew = *temp;
 				break;
 			case 7:
-				loc.sog = atof(temp);
+				loc->sog = atof(temp);
 				break;
 			case 8:
-				loc.cog = atof(temp);
+				loc->cog = atof(temp);
 				break;
 			case 9:
-				loc.date = atoi(temp);
+				loc->date = atoi(temp);
 				break;
 		}
 		field++;
@@ -67,7 +69,7 @@ int gps_log_data(char * data, struct gps_location* loc)
 	return 0;
 }
 
-uint32_t gps_calc_disp(float lat1, float lon1, float lat2, float lon2)
+float gps_calc_disp(float lat1, float lon1, float lat2, float lon2)
 {
 	lat1 = dm_to_dd(lat1);
 	lon1 = dm_to_dd(lon1);
@@ -77,14 +79,14 @@ uint32_t gps_calc_disp(float lat1, float lon1, float lat2, float lon2)
 	float a = 6378137;
 	float b = 6356752.3142;
 	float f = 1/298.257223563;		//flatening of geoid;
-	float dlon = (lon2 - lon1) * M_PI / 180;	//difference in longitude in radians
-	float s1 = sin(atan2((1 - f) * tan(lat1 * M_PI / 180)));	//sin of reduced lat1
-	float c1 = cos(atan2((1 - f) * tan(lat1 * M_PI / 180)));	//cos of reduced lon1
-	float s2 = sin(atan2((1 - f) * tan(lat2 * M_PI / 180)));	//sin of reduced lat2
-	float c2 = cos(atan2((1 - f) * tan(lat2 * M_PI / 180)));	//cos of reduced lon2
+	float L = (lon2 - lon1) * M_PI / 180;	//difference in longitude in radians
+	float s1 = sin(atan((1 - f) * tan(lat1 * M_PI / 180)));	//sin of reduced lat1
+	float c1 = cos(atan((1 - f) * tan(lat1 * M_PI / 180)));	//cos of reduced lon1
+	float s2 = sin(atan((1 - f) * tan(lat2 * M_PI / 180)));	//sin of reduced lat2
+	float c2 = cos(atan((1 - f) * tan(lat2 * M_PI / 180)));	//cos of reduced lon2
 	
-	float lambda = dlon;
-	float ltemp, sigma, ss, cs, sa, ca, csqa, C, usq, A, B, ds;
+	float lambda = L;
+	float ltemp, sigma, ss /*sin(sigma)*/, cs /*cos(sigma)*/, sa /*sin(alpha), ca cos(alpha)*/, csqa /*cos^2(alpha(*/, c2sm /*cos(2sigma sub m)*/, C, usq /*u^2*/, A, B, ds /*delta(sigma)*/;
 	int8_t lim = 0;
 	
 	do {
@@ -94,9 +96,9 @@ uint32_t gps_calc_disp(float lat1, float lon1, float lat2, float lon2)
 		sa = c1 * c2 * sin(lambda) / ss;			//sin(alpha)
 		csqa = 1 - sq(sa);					//cos_squared(alpha)
 		c2sm = cs - 2 * s1 * s2 / csqa;				//cos(2sigma_m)
-		C = f / 16 * csqa * (4 + f * (4 − 3 * csqa));		//intermediate value
+		C = f / 16 * csqa * (4 + f * (4 - 3 * csqa));		//intermediate value
 		ltemp = lambda;						//store old value of lambda
-		lambda = L + (1 − C) * f * sa * (sigma + C * ss * (c2sm + C * cs * ( −1 + 2 * sq(c2sm))));	//get new value
+		lambda = L + (1 - C) * f * sa * (sigma + C * ss * (c2sm + C * cs * (-1 + 2 * sq(c2sm))));	//get new value
 	} while (abs(lambda - ltemp) > 1e-12 && lim++ < 50);		//check for accuracy or too many iterations
 	
 	if (lim == 50) return -1;
@@ -104,7 +106,7 @@ uint32_t gps_calc_disp(float lat1, float lon1, float lat2, float lon2)
 	usq = csqa * (sq(a) - sq(b)) / sq(b);				//u squared
 	A = 1 + usq / 16384 * (4096 + usq * (-768 + usq * (320 - 175 * usq)));	//intermediate value
 	B = usq / 1024 * (256 + usq * (-128 + usq * (74 - 47 * usq)));	//intermediate value
-	ds = B * ss * (c2sm + B / 4 * (cs * (-1 + 2 * sq(c2sm)) - B / 6 * c2sm * (−3 + 4 * sq(ss)) * (−3 + 4 * sq(c2sm)))); //delta sigma
+	ds = B * ss * (c2sm + B / 4 * (cs * (-1 + 2 * sq(c2sm)) - B / 6 * c2sm * (-3 + 4 * sq(ss)) * (-3 + 4 * sq(c2sm)))); //delta sigma
 	
 	return b * A * (sigma - ds);					//displacement
 }
