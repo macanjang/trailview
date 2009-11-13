@@ -11,7 +11,6 @@
 //#include <avr/iom8.h>
 #include <string.h>
 #include "gps.h"
-#include <inttypes.h>
 #include <math.h>
 #include <stdlib.h>
 
