@@ -11,7 +11,7 @@ ADFLAGS=-p m644p -c ftdi -P /dev/ttyUSB0
 
 
 prog:
-	$(CC) $(CFLAGS) $(FILES) -o $(TARGET) -O
+	$(CC) $(FILES) -o $(TARGET) -O $(CFLAGS)
 	$(OBJ2HEX) -R .eeprom -O ihex $(TARGET) $(TARGET).hex
 	$(OBJ2HEX) -j .eeprop -O ihex $(TARGET) $(TARGET).eeprom
 	avrdude $(ADFLAGS) -V -F -U flash:w:$(TARGET).hex:i
