@@ -80,7 +80,7 @@ void lcd_wdata(unsigned char c)
 
 void lcd_go_line(char line)
 {
-	wcommand(0x80 + 40 * line);
+	wcommand(0x80 + 0x40 * line);
 }
 
 void lcd_go_line_clear(char line)
