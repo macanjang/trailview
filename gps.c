@@ -15,6 +15,17 @@
 #define PLENGTH 10
 #define sq(a) ((a)*(a))
 
+char gps_calcchecksum(const char * s)
+{
+	s++;
+	char c = *++s;
+
+	while (*s != '*' && *s != '\0')
+		c ^= *s++;
+	
+	return c;
+}
+
 int gps_log_data(char * data, struct gps_location * loc)
 {
 	int i = 0;

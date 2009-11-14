@@ -21,6 +21,9 @@ struct gps_displacement {
 	float final_bearing;
 };
 
+/* calculates a NMEA checksum */
+char gps_calcchecksum(const char * s)
+
 /*This function takes a data string
  *parses it and places it into the 
  *provided gps_location structure
