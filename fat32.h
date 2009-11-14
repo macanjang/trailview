@@ -23,10 +23,22 @@ struct fat32dirent_t
 	uint8_t attrib;
 	uint32_t cluster;
 	uint32_t size;
-	
+	uint32_t dcluster;
+
 	char type;
 };
 
+struct fatwrite_t
+{
+	int sect_i;
+	int sector_offset;
+	uint32_t size;
+	uint32_t f_cluster;
+	uint32_t cur_cluster;
+	uint32_t dir;
+	uint8_t buf[512];
+	char name[11];
+};
 
 /* the user level functions */
 
@@ -35,7 +47,14 @@ void cd(const char * s);
 void rn(const char * s, const char * snew);
 void del(const char * s);
 void cat(const char * s);
+char exists(const char * s);
+void touch(const char * s);
 
+/* routines for writing to empty files */
+
+char write_start(const char * s, struct fatwrite_t * fwrite);
+void write_add(struct fatwrite_t * fwrite, uint8_t * buf, int count);
+void write_end(struct fatwrite_t * fwrite);
 
 /* the workhorse functions */
 
@@ -44,13 +63,14 @@ void cat(const char * s);
 
 const char* str_to_fat(const char * str);
 void loop_dir(uint32_t fcluster, char (*funct)(struct fat32dirent_t*));
-void loop_file(uint32_t fcluster, void (*funct)(uint8_t *));
+void loop_file(uint32_t fcluster, int size, void (*funct)(uint8_t *, int));
+uint32_t fat_findempty(void);
 uint32_t fat_readnext(uint32_t cur_cluster);
 uint32_t fat_writenext(uint32_t cur_cluster, uint32_t new_cluster);
 void fat_clearchain(uint32_t first_cluster);
 char print_dirent(struct fat32dirent_t* de);
-void print_sect(uint8_t* s);
+void print_sect(uint8_t* s, int n);
 char find_dirent(struct fat32dirent_t* de);
-
+char find_emptyslot(struct fat32dirent_t* de);
 
 #endif

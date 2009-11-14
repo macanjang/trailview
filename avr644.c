@@ -72,6 +72,12 @@ int main(void)
 					receive_str(s1);
 					cat(s1);
 					break;
+
+				case 't' :
+					send_str("name: ");
+					receive_str(s1);
+					touch(s1);
+					break;
 					
 				case 's' :
 					send_str("sector: 0x");
@@ -86,7 +92,7 @@ int main(void)
 				
 				case 'h' :
 				default :
-					send_str("h - help\nl - dir listing\nc - change dir\nd - delete file\np - print file contents\ns - dump sector\n");
+					send_str("h - help\nl - dir listing\nc - change dir\nd - delete file\np - print file contents\nt - create empty file\ns - dump sector\n");
 					break;
 			
 			}
