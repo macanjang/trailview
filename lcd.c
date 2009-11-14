@@ -100,7 +100,7 @@ void lcd_print(const char *s)
 void lcd_printf(const char *fmt, ...)
 {
 	char l = 0;
-	lcd_go_line_clear(0);
+	lcd_go_line_clear(1);
 	
 	// var args
 	va_list ap;
