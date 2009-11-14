@@ -77,7 +77,7 @@ int gps_log_data(char * data, struct gps_location * loc)
 	return 0;
 }
 
-void gps_calc_disp(float lat1, float lon1, float lat2, float lon2, struct gps_displacement * gd)
+int gps_calc_disp(float lat1, float lon1, float lat2, float lon2, struct gps_displacement * gd)
 {
 	lat1 = dm_to_dd(lat1);
 	lon1 = dm_to_dd(lon1);
@@ -117,8 +117,10 @@ void gps_calc_disp(float lat1, float lon1, float lat2, float lon2, struct gps_di
 	ds = B * ss * (c2sm + B / 4 * (cs * (-1 + 2 * sq(c2sm)) - B / 6 * c2sm * (-3 + 4 * sq(ss)) * (-3 + 4 * sq(c2sm)))); //delta sigma
 	
 	gd->magnitude = b * A * (sigma - ds);			//displacement magnitude
-	gd->initial_bearing = atan2(c2 * sl , c1 * s2 - s1 * c2 * cl);	//displacement initial bearing	
-	gd->final_bearing = atan2(c1 * sl , -s1 * c2 + c1 * s2 * cl);	//displacement final bearing
+	gd->initial_bearing = atan2(c2 * sin(lambda) , c1 * s2 - s1 * c2 * cos(lambda));	//displacement initial bearing	
+	gd->final_bearing = atan2(c1 * sin(lambda) , -s1 * c2 + c1 * s2 * cos(lambda));	//displacement final bearing
+	
+	return 0;
 }
 
 float dm_to_dd(float dm)
