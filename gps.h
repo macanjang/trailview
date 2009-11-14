@@ -22,7 +22,7 @@ struct gps_displacement {
 };
 
 /* calculates a NMEA checksum */
-char gps_calcchecksum(const char * s)
+char gps_calcchecksum(const char * s);
 
 /*This function takes a data string
  *parses it and places it into the 
