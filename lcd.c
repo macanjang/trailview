@@ -75,7 +75,7 @@ void lcd_wdata(unsigned char c)
 	LCD_SET(LCD_E);
 	sleep(4); //4
 	LCD_CLR(LCD_E);
-	sleep(4); //4
+	sleep(1); //4
 }
 
 void lcd_go_line(char line)
