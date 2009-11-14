@@ -99,7 +99,8 @@ void lcd_print(const char *s)
 /* supports %s, %d, %%, and \n */
 void lcd_printf(const char *fmt, ...)
 {
-	lcd_go_line_clear(0);
+	lcd_wcommand(LCD_CLEAR):
+	lcd_go_line(0);
 	
 	// var args
 	va_list ap;
