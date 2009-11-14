@@ -24,7 +24,7 @@ int main(void)
 
 	lcd_init();
 	
-	lcd_print("Hello World!");
+	lcd_printf("Hello World! \n n: %d", 152);
 
 	// init card
 	send_str("\ninit mmc card: ");
