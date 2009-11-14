@@ -3,6 +3,9 @@
 
 void lcd_init(void);
 
+/* supports %s, %d, %%, and \n */
+void lcd_printf(const char *fmt, ...);
+
 void wcommand(unsigned char c);
 
 void wdata(unsigned char c);
