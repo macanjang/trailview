@@ -101,7 +101,8 @@ void lcd_printf(const char *fmt, ...)
 {
 	lcd_wcommand(LCD_CLEAR):
 	lcd_go_line(0);
-	
+	char l = 0;
+
 	// var args
 	va_list ap;
 	va_start(ap, fmt);
@@ -124,7 +125,7 @@ void lcd_printf(const char *fmt, ...)
 			}
 			break;
 
-		case '\n': lcd_go_line_clear(1);
+		case '\n': lcd_go_line_clear(++l);
 			break;
 		
 		default: lcd_wdata(*fmt);
