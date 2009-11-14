@@ -18,7 +18,7 @@
 char gps_calcchecksum(const char * s)
 {
 	s++;
-	char c = *++s;
+	char c = *s++;
 
 	while (*s != '*' && *s != '\0')
 		c ^= *s++;
