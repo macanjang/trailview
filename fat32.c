@@ -13,7 +13,9 @@
 
 /* the global fat32 fs structure */
 static struct fat32fs_t fat;
-#define CLUSTER(cn) ((fat.cluster_begin_lba + ((uint32_t)((cn ? cn : fat.root_dir_first_cluster) & 0x0fffffff) - 2) * fat.sectors_per_cluster) & 0x0fffffff)
+#define CLUSTER(cn) ((fat.cluster_begin_lba + ((uint32_t)(((cn > 1) ? (cn) : fat.root_dir_first_cluster) & 0x0fffffff) - 2) * fat.sectors_per_cluster) & 0x0fffffff)
+#define SECTOR(sn) (((sn) - fat.cluster_begin_lba) / fat.sectors_per_cluster + 2)
+#define FIXCLUSTERNUM(cn) ((cn > 1) ? (cn) : fat.root_dir_first_cluster)
 
 /* global directory entry data for parameter passing and holding the current directory */
 static struct fat32dirent_t ret_file;
@@ -76,10 +78,26 @@ const char* str_to_fat(const char * str)
 	return name;
 }
 
+/* finds an empty FAT cluster */
+uint32_t fat_findempty(void)
+{
+	unsigned int i;
+
+	for (cur_fatsect = fat.fat_begin_lba; cur_fatsect < fat.fat_begin_lba + fat.sectors_per_fat; cur_fatsect++) {
+		readsector(cur_fatsect, (uint8_t*)fatsect);
+		for (i=0; i<16; i++)
+			if (!fatsect[i])
+				return ((cur_fatsect - fat.fat_begin_lba) << 7) | i;
+	}
+
+	return 0x0fffffff; // out of space
+}
+
 /* reads the next cluster from the FAT */
 uint32_t fat_readnext(uint32_t cur_cluster)
 {
 	// compute FAT sector and index
+	cur_cluster = FIXCLUSTERNUM(cur_cluster);
 	uint32_t s = ((cur_cluster >> 7) + fat.fat_begin_lba);
 	uint16_t i = cur_cluster & 0x7f;
 	
@@ -100,6 +118,7 @@ uint32_t fat_writenext(uint32_t cur_cluster, uint32_t new_cluster)
 	uint32_t r;
 
 	// load the next FAT sector into buffer
+	cur_cluster = FIXCLUSTERNUM(cur_cluster);
 	r = fat_readnext(cur_cluster);
 
 	// write FAT sectors (mirrored FATs)
@@ -117,6 +136,7 @@ void fat_clearchain(uint32_t first_cluster)
 	uint32_t cur_cluster = first_cluster;
 
 	// compute FAT sector and index of the first cluster
+	cur_cluster = FIXCLUSTERNUM(cur_cluster);
 	uint32_t s = ((cur_cluster >> 7) + fat.fat_begin_lba);
 	uint16_t i = cur_cluster & 0x7f;
 	
@@ -256,9 +276,10 @@ int init_partition(int part)
 }
 
 /* prints a text sector */
-void print_sect(uint8_t* s)
+void print_sect(uint8_t* s, int n)
 {
-	send_nstr((char*)s, 512);
+	if (n > 512) n = 512;
+	send_nstr((char*)s, n);
 }
 
 /* prints a dirent */
@@ -296,6 +317,13 @@ char find_dirent(struct fat32dirent_t* de)
 	return 0;
 }
 
+/* finds an empty dirent slot */
+char find_emptyslot(struct fat32dirent_t* de)
+{
+	if (de->type == DIRENT_BLANK || de->type == DIRENT_END) return 1;
+	else return 0;
+}
+
 /* calls a subroutine for each dirent in the directory */
 void loop_dir(uint32_t fcluster, char (*funct)(struct fat32dirent_t*))
 {
@@ -309,7 +337,7 @@ void loop_dir(uint32_t fcluster, char (*funct)(struct fat32dirent_t*))
 	// print all directory entries
 	do {
 		// load next sector, following cluster chains
-		if (p - sect > 512) {
+		if (p - sect >= 512) {
 			cur_sect++;
 		
 			// get next cluster from fat
@@ -331,6 +359,7 @@ void loop_dir(uint32_t fcluster, char (*funct)(struct fat32dirent_t*))
 		// call provided function with each entry
 		if (funct(&d)) {
 			load_dirent(&ret_file, p);
+			ret_file.dcluster = cluster;
 			cur_line = p;
 			break;
 		}
@@ -340,10 +369,11 @@ void loop_dir(uint32_t fcluster, char (*funct)(struct fat32dirent_t*))
 }
 
 /* calls a subroutine for each dirent in the directory */
-void loop_file(uint32_t fcluster, void (*funct)(uint8_t *))
+void loop_file(uint32_t fcluster, int size, void (*funct)(uint8_t *, int))
 {
 	uint32_t cluster = fcluster;
 	uint32_t fsect = cur_sect = CLUSTER(fcluster);
+	uint32_t n = size;
 	
 	// loop through all sectors
 	while (1) {
@@ -361,8 +391,9 @@ void loop_file(uint32_t fcluster, void (*funct)(uint8_t *))
 		readsector(cur_sect, sect);
 		
 		// call provided function with each sector
-		funct(sect);
+		funct(sect, n);
 		
+		n -= 512;
 		cur_sect++;
 	}
 }
@@ -437,10 +468,156 @@ void cat(const char * s)
 	
 	// print if a printable file
 	if (IS_FILE(ret_file) && !IS_SUBDIR(ret_file))
-		loop_file(ret_file.cluster, print_sect);
+		loop_file(ret_file.cluster, ret_file.size, print_sect);
 	else send_str("non-printable file");
 	
 	send_char('\n');
 }
 
+char exists(const char * s)
+{
+	fncmp = str_to_fat(s);
+
+	loop_dir(cur_dir.cluster, find_dirent);
+	
+	return IS_FILE(ret_file);
+}
+
+/* doesn't check whether the file already exists */
+void touch(const char * s)
+{
+	const char* n = str_to_fat(s);
+	uint32_t oldcluster, cluster, fsect;
+	int i;
+
+	// find the next open spot
+	loop_dir(cur_dir.cluster, find_emptyslot);
+	cluster = ret_file.dcluster;
+	fsect = CLUSTER(ret_file.dcluster);
+
+	// write filename
+	for (i=0; i<11; i++)
+		cur_line[i] = *n++;
+	
+	// write filesize
+	GET32(cur_line + 0x1c) = 0;
+	
+	// write EOF to first cluster
+	GET16(cur_line + 0x14) = FAT_EOF>>16;
+	GET16(cur_line + 0x1a) = 0xffff;
+
+	// next dirent
+	cur_line += 32;
+	
+	// check if adding to end of directory
+	if (ret_file.type == DIRENT_END) {
+		// check if end of sector
+		if (cur_line - sect >= 512) {
+			// write current sector
+			writesector(cur_sect, sect);
+			// go to new sector
+			cur_sect++;
+
+			// get next cluster from fat
+			if (cur_sect - fsect >= fat.sectors_per_cluster) {
+				// link to blank cluster
+				oldcluster = cluster;
+				cluster = fat_findempty();
+				fat_writenext(oldcluster, cluster);
+			}
+			
+			// read new sector
+			cur_sect = fsect = CLUSTER(cluster);
+			readsector(cur_sect, sect);
+			cur_line = sect;
+		}
+
+		// write end of dir
+		cur_line[0] = 0x00;
+	}
+
+	// whatever just happened, the sector needs to be synced
+	writesector(cur_sect, sect);
+
+}
+
+/* routines for writing to empty files */
+
+char write_start(const char * s, struct fatwrite_t * fwrite)
+{
+	fncmp = str_to_fat(s);
+
+	loop_dir(cur_dir.cluster, find_dirent);
+	if (!IS_FILE(ret_file) || IS_SUBDIR(ret_file) || ret_file.size > 0)
+		return 0;
+
+	// save name
+	int i;
+	for (i=0; i<11; i++)
+		fwrite->name[i] = fncmp[i];
+
+	// save important data
+	fwrite->sect_i = 0;
+	fwrite->sector_offset = 0;
+	fwrite->size = 0;
+	
+	fwrite->cur_cluster = fat_findempty();
+	fwrite->dir = cur_dir.cluster;
+	
+	return 1;
+}
+
+
+void write_add(struct fatwrite_t * fwrite, uint8_t * buf, int count)
+{
+	int i;
+	uint32_t oldcluster;
+
+	// increase file size
+	fwrite->size += count;
+
+	for (i=0; i<count; i++) {
+		// filled sector, write out
+		if (fwrite->sect_i >= 512) {
+			// write current sector
+			writesector(CLUSTER(fwrite->cur_cluster) + fwrite->sector_offset, fwrite->buf);
+			// new cluster
+			fwrite->sector_offset++;
+			if (fwrite->sector_offset >= fat.sectors_per_cluster) {
+				fwrite->sector_offset = 0;
+				oldcluster = fwrite->cur_cluster;
+				fwrite->cur_cluster = fat_findempty();
+				fat_writenext(oldcluster, fwrite->cur_cluster);
+			}
+			// new sector
+			fwrite->sect_i = 0;
+		}
+		
+		// copy next byte to buffer
+		fwrite->buf[fwrite->sect_i++] = buf[i];
+	}
+}
+
+void write_end(struct fatwrite_t * fwrite)
+{
+	// write out current buffer
+	writesector(CLUSTER(fwrite->cur_cluster) + fwrite->sector_offset, fwrite->buf);
+	
+	// find file in dir
+	fncmp = fwrite->name;
+	loop_dir(fwrite->dir, find_dirent);
+
+	// sanity check
+	if (!IS_FILE(ret_file)) return;
+
+	// write filesize
+	GET32(cur_line + 0x1c) = fwrite->size;
+	
+	// write first cluster
+	GET16(cur_line + 0x14) = fwrite->f_cluster >> 16;
+	GET16(cur_line + 0x1a) = fwrite->f_cluster;
+
+	// write out updated dir entry
+	writesector(cur_sect, sect);
+}
 
