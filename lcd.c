@@ -24,7 +24,6 @@
 #define LCD_ENTRYMODE 0x06
 #define LCD_SHIFT_LEFT 0x18
 #define LCD_SHIFT_RIGHT 0x1c
-#define LCD_SCREEN_
 #define LCD_SCREEN_OFF 0x08
 #define LCD_SCREEN_ON 0x0c
 #define LCD_CURSOR_LEFT 0x10
@@ -61,9 +60,9 @@ void wcommand(unsigned char c)
 	LCD_SET(LCD_E);
 	asm( "nop" "\n\t" :: );
 	DATAPORT = c;
-	sleep(6); //5
+	sleep(5); //5
 	LCD_CLR(LCD_E);
-	sleep(6); //5
+	sleep(5); //5
 }
 
 void wdata(unsigned char c)
@@ -73,9 +72,9 @@ void wdata(unsigned char c)
 	LCD_CLR(LCD_RW);
 	DATAPORT = c;
 	LCD_SET(LCD_E);
-	sleep(6); //4
+	sleep(4); //4
 	LCD_CLR(LCD_E);
-	sleep(6); //4
+	sleep(4); //4
 }
 
 void goLine(char line)
