@@ -31,7 +31,7 @@ int gps_log_data(char * data, struct gps_location* loc);
  *of two GPS locations and returns the displacement
  *using the Vincenty formula, accurate to .5 mm
  */
-float gps_calc_disp(float lat1, float lon1, float lat2, float lon2);
+int gps_calc_disp(float lat1, float lon1, float lat2, float lon2, struct gps_displacement * gd);
 
 /*This function converts a lattitude (ddmm.mmmm)
  *or longitude dddmm.mmmm to decimal degrees
