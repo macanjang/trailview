@@ -1,11 +1,11 @@
 CC=avr-gcc
 CFLAGS=-g -Os -Wall -mcall-prologues -mmcu=atmega644p -lm
 OBJ2HEX=avr-objcopy
-FILES=avr644.c serial.c sdcard.c fat32.c lcd.c gps.c
+#FILES=avr644.c serial.c sdcard.c fat32.c lcd.c gps.c
+FILES=gps.c serialgps.c gpstest.c
 #TARGET=avr644
 TARGET=gps
-#ADFLAGS=-p m644p -c usbasp
-ADFLAGS=-p m644p -c ftdi -P /dev/ttyUSB0
+ADFLAGS=-p m644p -c usbasp
 
 .PHONY: fuses prog erase
 
@@ -13,7 +13,7 @@ ADFLAGS=-p m644p -c ftdi -P /dev/ttyUSB0
 prog:
 	$(CC) $(FILES) -o $(TARGET) -O $(CFLAGS)
 	$(OBJ2HEX) -R .eeprom -O ihex $(TARGET) $(TARGET).hex
-	$(OBJ2HEX) -j .eeprop -O ihex $(TARGET) $(TARGET).eeprom
+#	$(OBJ2HEX) -j .eeprop -O ihex $(TARGET) $(TARGET).eeprom
 	avrdude $(ADFLAGS) -V -F -U flash:w:$(TARGET).hex:i
 #	avrdude $(ADFLAGS) -U eeprom:w:$(TARGET).eeprom:i
 

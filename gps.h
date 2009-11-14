@@ -15,6 +15,12 @@ struct gps_location {
 	int date;		//ddmmyy
 };
 
+struct gps_displacement {
+	float magnitude;
+	float initial_bearing;
+	float final_bearing;
+};
+
 /*This function takes a data string
  *parses it and places it into the 
  *provided gps_location structure
