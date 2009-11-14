@@ -27,22 +27,26 @@ int main (int argc, char* argv[])
 	send_gps("$PSRF103,04,00,01,01*");
 	send_gps("$PSRF103,05,00,00,01*");
 	
-	char in[80];
+	char in[128];
 	int i;
 	
-	receive_str(in);
-	if (gps_log_data(in , &gl1)) {
-		lcd_printf("Error: Wrong\nGPS Data");
-	} else {
-		while (1) {
-			lcd_printf("while loop");
-			receive_str(in);
-			lcd_printf("rx string");
-			i = gps_log_data(in , &gl2);
-			lcd_printf("gpslog: %d",i);
-			gps_calc_disp(gl1.lat , gl1.lon , gl2.lat , gl2.lon , &gd);
-			lcd_printf("Disp: %d \n IB: %d  FB: %d", gd.magnitude , gd.initial_bearing , gd.final_bearing);
+	while (1) {
+	
+		receive_str(in);
+	
+		if (gps_log_data(in , &gl1)) {
+			lcd_printf("Error: Wrong\nGPS Data");
+		} else {
+			while (1) {
+				receive_str(in);
+				i = gps_log_data(in , &gl2);
+				lcd_printf("lat: %d\nlon: %d", (int)gl2.lat, (int)gl2.lon);
+				gps_calc_disp(gl1.lat , gl1.lon , gl2.lat , gl2.lon , &gd);
+				//lcd_printf("IB: %d  FB: %d\nDisp: %d It: %d", (int)gd.initial_bearing , (int)gd.final_bearing , (int)gd.magnitude , (int)gd.iterations);
+			}
 		}
+	
 	}
+	
 	return 0;
 }
