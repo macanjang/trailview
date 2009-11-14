@@ -80,7 +80,7 @@ void lcd_wdata(unsigned char c)
 
 void lcd_go_line(char line)
 {
-	wcommand(0x80 + 0x40 * line);
+	wcommand(0x80 | (0x40 * line));
 }
 
 void lcd_go_line_clear(char line)
@@ -99,8 +99,7 @@ void lcd_print(const char *s)
 /* supports %s, %d, %%, and \n */
 void lcd_printf(const char *fmt, ...)
 {
-	char l = 0;
-	lcd_go_line_clear(1);
+	lcd_go_line_clear(0);
 	
 	// var args
 	va_list ap;
@@ -123,7 +122,7 @@ void lcd_printf(const char *fmt, ...)
 					break;
 			}
 
-		case '\n': lcd_go_line_clear(++l);
+		case '\n': lcd_go_line_clear(1);
 			break;
 		
 		default: lcd_wdata(*fmt);
