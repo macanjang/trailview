@@ -6,17 +6,17 @@ void lcd_init(void);
 /* supports %s, %d, %%, and \n */
 void lcd_printf(const char *fmt, ...);
 
-void wcommand(unsigned char c);
+void lcd_wcommand(unsigned char c);
 
-void wdata(unsigned char c);
+void lcd_wdata(unsigned char c);
 
-void goLine(char line);
+void lcd_go_line(char line);
 
-void goClearLine(char line);
+void lcd_go_line_clear(char line);
 
-void print(const char *s);
+void lcd_print(const char *s);
 
-void printInt(signed int i);
+void lcd_print_int(signed int i);
 
 void lcd_init_seq(void);
 

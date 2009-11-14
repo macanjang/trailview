@@ -66,7 +66,7 @@ void wcommand(unsigned char c)
 	sleep(5); //5
 }
 
-void wdata(unsigned char c)
+void lcd_wdata(unsigned char c)
 {
 	DDRC = 0xff;
 	LCD_SET(LCD_RS);
@@ -78,29 +78,29 @@ void wdata(unsigned char c)
 	sleep(4); //4
 }
 
-void goLine(char line)
+void lcd_go_line(char line)
 {
 	wcommand(0x80 + 40 * line);
 }
 
-void goClearLine(char line)
+void lcd_go_line_clear(char line)
 {
 	int i;
-	goLine(line);
-	for (i = 0; i < 16; i++) wdata(' ');
-	goLine(line);
+	lcd_go_line(line);
+	for (i = 0; i < 16; i++) lcd_wdata(' ');
+	lcd_go_line(line);
 }
 
-void print(const char *s)
+void lcd_print(const char *s)
 {
-	while (*s) wdata(*s++);
+	while (*s) lcd_wdata(*s++);
 }
 
 /* supports %s, %d, %%, and \n */
 void lcd_printf(const char *fmt, ...)
 {
 	char l = 0;
-	goClearLine(0);
+	lcd_go_line_clear(0);
 	
 	// var args
 	va_list ap;
@@ -110,23 +110,23 @@ void lcd_printf(const char *fmt, ...)
 		switch (*fmt) {
 		case '%':
 			switch (*++fmt) {
-				case 's': print(va_arg(ap, char*));
+				case 's': lcd_print(va_arg(ap, char*));
 					break;
 
-				case 'd': printInt(va_arg(ap, int));
+				case 'd': lcd_print_int(va_arg(ap, int));
 					break;
 
 				case '\0': fmt--;
 					break;
 
-				default: wdata(*fmt);
+				default: lcd_wdata(*fmt);
 					break;
 			}
 
-		case '\n': goClearLine(++l);
+		case '\n': lcd_go_line_clear(++l);
 			break;
 		
-		default: wdata(*fmt);
+		default: lcd_wdata(*fmt);
 			break;
 		}
 		fmt++;
@@ -135,10 +135,10 @@ void lcd_printf(const char *fmt, ...)
 	va_end(ap);
 }
 
-void printInt(signed int i)
+void lcd_print_int(signed int i)
 {
 	char string[7];
-	char tempNum[5];
+	char tempnum[5];
 	char *pChar = &string[0];
 	char j = 0;
 	if (i < 0) {
@@ -146,13 +146,13 @@ void printInt(signed int i)
 		i = -i;
 	}
 	while (i || !j) {
-		tempNum[(int)j] = i % 10;
+		tempnum[(int)j] = i % 10;
 		i /= 10;
 		j++;
 	}
-	while (j--) *pChar++ = tempNum[(int)j] + '0';
+	while (j--) *pChar++ = tempnum[(int)j] + '0';
 	*pChar = 0;
-	print(&string[0]);
+	lcd_print(&string[0]);
 }
 
 void lcd_init_seq(void)
