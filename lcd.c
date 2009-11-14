@@ -3,6 +3,7 @@
 #define F_CPU 8E6  // 8 MHz
 #include <util/delay.h>
 
+#include <stdarg.h>
 #include "lcd.h"
 
 #define LCD_RS 4
@@ -93,6 +94,45 @@ void goClearLine(char line)
 void print(const char *s)
 {
 	while (*s) wdata(*s++);
+}
+
+/* supports %s, %d, %%, and \n */
+void lcd_printf(const char *fmt, ...)
+{
+	char l = 0;
+	goClearLine(0);
+	
+	// var args
+	va_list ap;
+	va_start(ap, fmt);
+	
+	while (*fmt) {
+		switch (*fmt) {
+		case '%':
+			switch (*++fmt) {
+				case 's': print(va_arg(ap, char*));
+					break;
+
+				case 'd': printInt(va_arg(ap, int));
+					break;
+
+				case '\0': fmt--;
+					break;
+
+				default: wdata(*fmt);
+					break;
+			}
+
+		case '\n': goClearLine(++l);
+			break;
+		
+		default: wdata(*fmt);
+			break;
+		}
+		fmt++;
+	}
+
+	va_end(ap);
 }
 
 void printInt(signed int i)
