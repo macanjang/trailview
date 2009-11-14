@@ -122,6 +122,7 @@ void lcd_printf(const char *fmt, ...)
 				default: lcd_wdata(*fmt);
 					break;
 			}
+			break;
 
 		case '\n': lcd_go_line_clear(1);
 			break;
