@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include "lcd.h"
 
-#define PLENGTH 10
+#define PLENGTH 16
 #define sq(a) ((a)*(a))
 
 char gps_calcchecksum(const char * s)
@@ -43,6 +43,7 @@ int gps_log_data(char * data, struct gps_location * loc)
 		}
 		temp[j] = '\0';
 		j = 0;
+		i++;
 		
 		switch (field) {
 			case 0:			//error checking, return -1 if wrong data
@@ -134,5 +135,6 @@ double dm_to_dd(double dm)
 {
 	double dd = floor(dm/100);		//get rid of minutes
 	double mm = (dm - dd * 100) / 60;	//get rid of degrees and convert to decimal deg
+	//printf("dm: %f mm: %f mm + dd: %f\n",mm+dd);
 	return (mm + dd);			//add em up and return
 }
