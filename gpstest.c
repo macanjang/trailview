@@ -30,22 +30,44 @@ int main (int argc, char* argv[])
 	char in[128];
 	int i;
 	
-	while (1) {
-	
+	do {
 		receive_str(in);
+		lcd_printf("Error: Wrong\nGPS Data");
+	} while (gps_log_data(in , &gl1));
 	
-		if (gps_log_data(in , &gl1)) {
-			lcd_printf("Error: Wrong\nGPS Data");
-		} else {
-			while (1) {
-				receive_str(in);
-				i = gps_log_data(in , &gl2);
-				lcd_printf("lat: %d\nlon: %d", (int)gl2.lat, (int)gl2.lon);
-				gps_calc_disp(gl1.lat , gl1.lon , gl2.lat , gl2.lon , &gd);
-				//lcd_printf("IB: %d  FB: %d\nDisp: %d It: %d", (int)gd.initial_bearing , (int)gd.final_bearing , (int)gd.magnitude , (int)gd.iterations);
-			}
-		}
+	for (i = 0 ; i < 5 ; i++) {
+		receive_str(in);
+		lcd_printf("Fixing");
+		receive_str(in);
+		lcd_printf("Fixing.");
+		receive_str(in);
+		lcd_printf("Fixing..");
+		receive_str(in);
+		lcd_printf("Fixing...");
+		receive_str(in);
+		lcd_printf("Fixing....");
+		receive_str(in);
+		lcd_printf("Fixing.....");
+		receive_str(in);
+		lcd_printf("Fixing......");
+		receive_str(in);
+		lcd_printf("Fixing.......");
+		receive_str(in);
+		lcd_printf("Fixing........");
+		receive_str(in);
+		lcd_printf("Fixing.........");
+		receive_str(in);
+		lcd_printf("Fixing..........");
+	}
 	
+	gps_log_data(in , &gl1);
+	
+	while (1) {
+		receive_str(in);
+		i = gps_log_data(in , &gl2);
+		//lcd_printf("lat: %d\nlon: %d", (int)gl2.lat, (int)gl2.lon);
+		gps_calc_disp(gl1.lat , gl1.lon , gl2.lat , gl2.lon , &gd);
+		lcd_printf("IB: %d\xb2 FB: %d\xb2\nMg: %dm Sp: %d", (int)gd.initial_bearing , (int)gd.final_bearing , (int)gd.magnitude , (int)(1.15*gl2.sog));
 	}
 	
 	return 0;
