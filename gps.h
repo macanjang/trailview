@@ -19,6 +19,7 @@ struct gps_displacement {
 	double magnitude;
 	double initial_bearing;
 	double final_bearing;
+	double speed;
 	char iterations;
 };
 
