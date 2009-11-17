@@ -2,6 +2,7 @@
 #include "sdcard.h"
 #include "serial.h"
 #include "convert.h"
+#include "lcd.h"
 
 #include <inttypes.h>
 #include <ctype.h>
@@ -35,7 +36,7 @@ int readsector(uint32_t lba, uint8_t *buffer)
 {
 	int r;
 	if ((r = mmc_readsector(lba, buffer)))
-		send_str("error reading sector\n");
+		lcd_printf("error reading sector\n");
 	return r;
 }
 
@@ -44,7 +45,7 @@ int writesector(uint32_t lba, uint8_t *buffer)
 {
 	int r;
 	if ((r = mmc_writesector(lba, buffer)))
-		send_str("error writing sector\n");
+		lcd_printf("error writing sector\n");
 	return r;
 }
 
@@ -111,7 +112,7 @@ uint32_t fat_readnext(uint32_t cur_cluster)
 	return fatsect[i];
 }
 
-/* writes the next cluster to the FAT, returning what it was */
+/* writes the next cluster to the FAT */
 /* uses a blocking write-through philosophy for the buffer, which can be inefficient */
 uint32_t fat_writenext(uint32_t cur_cluster, uint32_t new_cluster)
 {
@@ -203,26 +204,22 @@ int init_partition(int part)
 	
 	// read MBR
 	if (readsector(0, sect)) {
-		send_str("error: problem reading sector\n");
+		lcd_printf("error: problem reading sector\n");
 		return 1;	
 	} else {
-		send_str("initializing partition #");
-		send_int(part + 1);
-		send_char('\n');
+		lcd_printf("init part #%d", part + 1);
 	}
 	
 	// sanity check
 	if (GET16(sect + 510) != 0xaa55) {
-		send_str("error: bad MBR\n");
+		lcd_printf("error: bad MBR\n");
 		return 2;
 	}
 	
 	// check if partition is fat32
 	p = sect + 446 + part*16;
 	if (p[4] != 0x0b && p[4] != 0x0c) {
-		send_str("error: partition is not FAT32\nfound type code: 0x");
-		send_hexbyte(p[4]);
-		send_char('\n');
+		lcd_printf("error: not FAT32\ntype: ", p[4]);
 		return 3;
 	}
 	
@@ -231,24 +228,24 @@ int init_partition(int part)
 	
 	// read partition Volume ID
 	if (readsector(fat.partition_begin_lba, sect)) {
-		send_str("error: problem reading sector\n");
+		lcd_printf("error: sector read\n");
 		return 1;	
 	}
 	
 	// check bytes per sector (should be 512)
 	if (GET16(sect + 0xb) != 512) {
-		send_str("error: partition uses non-512 byte sectors\n");
+		lcd_printf("error: non-512b sectors\n");
 		return 4;
 	}
 	
 	// check for 2 FATs
 	if (sect[0x10] != 2) {
-		send_str("warning: partition not using mirrored FATs\nwrite routines may corrupt data\n");
+		lcd_printf("warning: not\nmirrored FATs");
 	}
 	
 	// sanity check
 	if (GET16(sect + 510) != 0xaa55) {
-		send_str("error: missing Volume ID signature\n");
+		lcd_printf("error: missing Vol ID sig\n");
 		return 2;
 	}
 	
@@ -469,7 +466,7 @@ void cat(const char * s)
 	// print if a printable file
 	if (IS_FILE(ret_file) && !IS_SUBDIR(ret_file))
 		loop_file(ret_file.cluster, ret_file.size, print_sect);
-	else send_str("non-printable file");
+	else lcd_printf("non-printable file");
 	
 	send_char('\n');
 }
@@ -561,13 +558,13 @@ char write_start(const char * s, struct fatwrite_t * fwrite)
 	fwrite->sector_offset = 0;
 	fwrite->size = 0;
 	
-	fwrite->cur_cluster = fat_findempty();
+	fwrite->cur_cluster = fwrite->f_cluster = fat_findempty();
 	fwrite->dir = cur_dir.cluster;
 	
 	return 1;
 }
 
-
+/*
 void write_add(struct fatwrite_t * fwrite, uint8_t * buf, int count)
 {
 	int i;
@@ -578,7 +575,7 @@ void write_add(struct fatwrite_t * fwrite, uint8_t * buf, int count)
 
 	for (i=0; i<count; i++) {
 		// filled sector, write out
-		if (fwrite->sect_i >= 512) {
+		if (fwrite->sect_i >= 511) {
 			// write current sector
 			writesector(CLUSTER(fwrite->cur_cluster) + fwrite->sector_offset, fwrite->buf);
 			// new cluster
@@ -588,6 +585,7 @@ void write_add(struct fatwrite_t * fwrite, uint8_t * buf, int count)
 				oldcluster = fwrite->cur_cluster;
 				fwrite->cur_cluster = fat_findempty();
 				fat_writenext(oldcluster, fwrite->cur_cluster);
+				fat_writenext(fwrite->cur_cluster, FAT_EOF);
 			}
 			// new sector
 			fwrite->sect_i = 0;
@@ -596,12 +594,37 @@ void write_add(struct fatwrite_t * fwrite, uint8_t * buf, int count)
 		// copy next byte to buffer
 		fwrite->buf[fwrite->sect_i++] = buf[i];
 	}
+}*/
+
+void write_add(struct fatwrite_t * fwrite, uint8_t * buf, int count)
+{
+	int i;
+	uint32_t oldcluster;
+
+	for (i=0; i<count; i++) {
+		// filled sector, write out
+		if (fwrite->sect_i >= 512) {
+			write_end(fwrite);
+			oldcluster = fwrite->cur_cluster;
+			fwrite->cur_cluster = fat_findempty();
+			fat_writenext(oldcluster, fwrite->cur_cluster);
+			fat_writenext(fwrite->cur_cluster, FAT_EOF);
+			
+			// new sector
+			fwrite->sect_i = 0;
+		}
+		
+		// copy next byte to buffer
+		fwrite->buf[fwrite->sect_i++] = buf[i];
+		fwrite->size++;
+	}
 }
 
 void write_end(struct fatwrite_t * fwrite)
 {
 	// write out current buffer
 	writesector(CLUSTER(fwrite->cur_cluster) + fwrite->sector_offset, fwrite->buf);
+	fat_writenext(fwrite->cur_cluster, FAT_EOF);
 	
 	// find file in dir
 	fncmp = fwrite->name;
