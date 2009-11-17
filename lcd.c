@@ -117,6 +117,9 @@ void lcd_printf(const char *fmt, ...)
 				case 'd': lcd_print_int(va_arg(ap, int));
 					break;
 
+				case 'c': lcd_wdata(va_arg(ap, int));
+					break;
+
 				case '\0': fmt--;
 					break;
 
