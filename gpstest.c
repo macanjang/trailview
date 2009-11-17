@@ -46,7 +46,10 @@ int main (int argc, char* argv[])
 			i = gps_log_data(in , &gl2);
 		
 			// check for fix
-			if (gl2.status != 'A') break;
+			if (gl2.status != 'A') {
+				lcd_printf("Lost GPS Fix %c\n", loading_map[(c++)&0x3]);
+				continue;
+			}
 		
 			// compute and display
 			gps_calc_disp(gl1.lat , gl1.lon , gl2.lat , gl2.lon , &gd);
