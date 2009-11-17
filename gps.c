@@ -128,8 +128,8 @@ int gps_calc_disp(double lat1, double lon1, double lat2, double lon2, struct gps
 	ds = B * ss * (c2sm + B / 4 * (cs * (-1 + 2 * sq(c2sm)) - B / 6 * c2sm * (-3 + 4 * sq(ss)) * (-3 + 4 * sq(c2sm)))); //delta sigma
 	
 	gd->magnitude = b * A * (sigma - ds);				//displacement magnitude
-	gd->initial_bearing = atan2(c2 * sin(lambda) , c1 * s2 - s1 * c2 * cos(lambda));	//displacement initial bearing	
-	gd->final_bearing = atan2(c1 * sin(lambda) , -s1 * c2 + c1 * s2 * cos(lambda));		//displacement final bearing
+	gd->initial_bearing = atan2(c2 * sin(lambda) , c1 * s2 - s1 * c2 * cos(lambda)) * 180. / M_PI;	//displacement initial bearing	
+	gd->final_bearing = atan2(c1 * sin(lambda) , -s1 * c2 + c1 * s2 * cos(lambda)) * 180. / M_PI;		//displacement final bearing
 	gd->iterations = lim;
 	
 	return 0;
