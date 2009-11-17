@@ -27,24 +27,36 @@ int main (int argc, char* argv[])
 	char c = 0;
 	char loading_map[] = {'-', '\\', '|', '/'};
 	
-	// wait until valid location
-	do {
-		receive_str(in);
-		if (gps_log_data(in , &gl1))
-			lcd_printf("Bad GPS Data");
-		else lcd_printf("Fixing %c", (c++)&0x3);
-	} while (gl1.status != 'A');
-	
-	// compute displacement
 	while (1) {
-		receive_str(in);
-		i = gps_log_data(in , &gl2);
-		gps_calc_disp(gl1.lat , gl1.lon , gl2.lat , gl2.lon , &gd);
-		lcd_printf("IB: %d\xb2 FB: %d\xb2\nMg: %dm Sp: %d",
-			(int)gd.initial_bearing,
-			(int)gd.final_bearing,
-			(int)gd.magnitude,
-			(int)(1.15*gl2.sog));
+
+		// wait until valid location
+		do {
+			receive_str(in);
+			if (gps_log_data(in , &gl1))
+				lcd_printf("Bad GPS Data");
+			else lcd_printf("GPS Fixing %c", (c++)&0x3);
+		} while (gl1.status != 'A');
+	
+		// got fix
+		lcd_printf("Acquired Fix");
+
+		// compute displacement
+		while (1) {
+			receive_str(in);
+			i = gps_log_data(in , &gl2);
+		
+			// check for fix
+			if (gl2.status != 'A') break;
+		
+			// compute and display
+			gps_calc_disp(gl1.lat , gl1.lon , gl2.lat , gl2.lon , &gd);
+			lcd_printf("IB: %d\xb2 FB: %d\xb2\nMg: %dm Sp: %d",
+				(int)gd.initial_bearing,
+				(int)gd.final_bearing,
+				(int)gd.magnitude,
+				(int)(1.15*gl2.sog));
+		}
+
 	}
 	
 	return 0;
