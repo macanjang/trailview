@@ -14,9 +14,9 @@ void lcd_go_line(char line);
 
 void lcd_go_line_clear(char line);
 
-void lcd_print(const char *s);
+int lcd_print(const char *s);
 
-void lcd_print_int(signed int i);
+int lcd_print_int(signed int i);
 
 void lcd_init_seq(void);
 

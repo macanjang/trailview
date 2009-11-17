@@ -91,61 +91,74 @@ void lcd_go_line_clear(char line)
 	lcd_go_line(line);
 }
 
-void lcd_print(const char *s)
+int lcd_print(const char *s)
 {
-	while (*s) lcd_wdata(*s++);
+	int r = 0;
+	while (*s) {
+		lcd_wdata(*s++);
+		r++;
+	}
+	
+	return r;
 }
 
 /* supports %s, %d, %%, and \n */
 void lcd_printf(const char *fmt, ...)
 {
-	wcommand(LCD_CLEAR);
 	lcd_go_line(0);
-	char l = 0;
+	char l = 0, i = 0;;
 
 	// var args
 	va_list ap;
 	va_start(ap, fmt);
 	
-	while (*fmt) {
+	while (*fmt) {		
 		switch (*fmt) {
 		case '%':
 			switch (*++fmt) {
-				case 's': lcd_print(va_arg(ap, char*));
+				case 's': i += lcd_print(va_arg(ap, char*));
 					break;
 
-				case 'd': lcd_print_int(va_arg(ap, int));
+				case 'd': i += lcd_print_int(va_arg(ap, int));
 					break;
 
 				case 'c': lcd_wdata(va_arg(ap, int));
+					i++;
 					break;
 
 				case '\0': fmt--;
 					break;
 
 				default: lcd_wdata(*fmt);
+					i++;
 					break;
 			}
 			break;
 
-		case '\n': lcd_go_line_clear(++l);
+		case '\n': while (i++ < 16) lcd_wdata(' '); // clear remainder of line
+			lcd_go_line(++l);
+			i = 0;
 			break;
 		
 		default: lcd_wdata(*fmt);
+			i++;
 			break;
 		}
 		fmt++;
 	}
+	
+	// clear remainder of line
+	while (i++ < 16) lcd_wdata(' ');
 
 	va_end(ap);
 }
 
-void lcd_print_int(signed int i)
+int lcd_print_int(signed int i)
 {
 	char string[7];
 	char tempnum[5];
 	char *pChar = &string[0];
-	char j = 0;
+	char j = 0, r;
 	if (i < 0) {
 		*pChar++ = '-';
 		i = -i;
@@ -155,9 +168,12 @@ void lcd_print_int(signed int i)
 		i /= 10;
 		j++;
 	}
+	r = j;
 	while (j--) *pChar++ = tempnum[(int)j] + '0';
 	*pChar = 0;
 	lcd_print(&string[0]);
+	
+	return r;
 }
 
 void lcd_init_seq(void)
@@ -177,7 +193,7 @@ void lcd_init_seq(void)
 	wcommand(LCD_SCREEN_OFF);
 	
 	wcommand(LCD_ENTRYMODE); // set entry mode
-	wcommand(LCD_CURSOR_BLINK); // cursor type and display on
+	wcommand(LCD_CURSOR_OFF); // cursor type and display on
 	wcommand(LCD_CLEAR); // clear display
 }
 
