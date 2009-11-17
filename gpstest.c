@@ -1,17 +1,29 @@
 //Some test code for gps data transmission and communication
 
 #include <stdio.h>
+#include <string.h>
+#include <inttypes.h>
 #include "gps.h"
 #include "serialgps.h"
 #include "lcd.h"
+#include "fat32.h"
+#include "sdcard.h"
 
 int main (int argc, char* argv[])
 {
 	struct gps_location gl1 , gl2;
 	struct gps_displacement gd;
+	struct fatwrite_t fout;
 	
 	gps_init_serial();
 	lcd_init();
+	char rt = mmc_init();
+	if (rt) {
+		lcd_printf("sd card error\n");
+		while (1) ;
+	}
+	
+	init_partition(0);
 	
 	// disable unwanted GPS signals (set rate to 0)
 	// $PSRF103,<msg>,<mode>,<rate>,<cksumEn>*CKSUM<CR><LF>
@@ -22,8 +34,14 @@ int main (int argc, char* argv[])
 	send_gps("$PSRF103,04,00,01,01*");
 	send_gps("$PSRF103,05,00,00,01*");
 	
+	// init write
+#define LOGNAME "log9.txt"
+	del(LOGNAME);
+	touch(LOGNAME);
+	write_start(LOGNAME, &fout);
+	
 	char in[128];
-	int i;
+	int i, j = 0;
 	char c = 0;
 	char loading_map[] = {'-', '\\', '|', '/'};
 	
@@ -32,9 +50,8 @@ int main (int argc, char* argv[])
 		// wait until valid location
 		do {
 			receive_str(in);
-			if (gps_log_data(in , &gl1))
-				lcd_printf("Bad GPS Data");
-			else lcd_printf("GPS Fixing %c", loading_map[(c++)&0x3]);
+			gps_log_data(in , &gl1);
+			lcd_printf("GPS Fixing %c\n", loading_map[(c++)&0x3]);
 		} while (gl1.status != 'A');
 	
 		// got fix
@@ -58,6 +75,14 @@ int main (int argc, char* argv[])
 				(int)gd.final_bearing,
 				(int)gd.magnitude,
 				(int)(1.15*gl2.sog));
+				
+			// log first 50 points
+			write_add(&fout, (uint8_t*)in, strlen(in));
+			if (j++ >= 20) {
+				write_end(&fout);
+				lcd_printf("done logging\n");
+				while (1) ;
+			}
 		}
 
 	}
