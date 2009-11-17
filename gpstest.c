@@ -34,7 +34,7 @@ int main (int argc, char* argv[])
 			receive_str(in);
 			if (gps_log_data(in , &gl1))
 				lcd_printf("Bad GPS Data");
-			else lcd_printf("GPS Fixing %c", (c++)&0x3);
+			else lcd_printf("GPS Fixing %c", loading_map[(c++)&0x3]);
 		} while (gl1.status != 'A');
 	
 		// got fix
