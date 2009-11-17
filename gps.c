@@ -132,6 +132,10 @@ int gps_calc_disp(double lat1, double lon1, double lat2, double lon2, struct gps
 	gd->final_bearing = atan2(c1 * sin(lambda) , -s1 * c2 + c1 * s2 * cos(lambda)) * 180. / M_PI;		//displacement final bearing
 	gd->iterations = lim;
 	
+	// make the bearings always positive
+	if (gd->initial_bearing < 0) gd->initial_bearing += 360.;
+	if (gd->final_bearing < 0) gd->final_bearing += 360.;
+	
 	return 0;
 }
 
