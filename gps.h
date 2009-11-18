@@ -2,6 +2,7 @@
 #define _GPS_H
 
 #include <inttypes.h>
+#include "fat32.h"
 
 struct gps_location {
 	double time;		//time of GPS data query hhmmss.sss
@@ -42,5 +43,10 @@ int gps_calc_disp(double lat1, double lon1, double lat2, double lon2, struct gps
  *or longitude dddmm.mmmm to decimal degrees
  */
 double dm_to_dd(double dm);	//lat ddmm.mmmm and lon dddmm.mmmm to decimal degrees 
+
+/* For logging KML data */
+void log_start(const char * name, struct fatwrite_t * fwrite);
+void log_end(struct fatwrite_t * fwrite);
+void log_add(struct fatwrite_t * fwrite, struct gps_location * gl);
 
 #endif

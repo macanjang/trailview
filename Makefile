@@ -1,5 +1,5 @@
 CC=avr-gcc
-CFLAGS=-g -Os -Wall -mcall-prologues -mmcu=atmega644 -lm
+CFLAGS=-g -Os -Wall -mcall-prologues -mmcu=atmega644 -Wl,-u,vfprintf -lprintf_flt -lm
 OBJ2HEX=avr-objcopy
 FILES=gpstest.c serialgps.c sdcard.c fat32.c lcd.c gps.c 
 #TARGET=avr644

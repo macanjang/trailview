@@ -9,6 +9,8 @@
 #include "fat32.h"
 #include "sdcard.h"
 
+#define LOGNAME "log.kml"
+
 int main (int argc, char* argv[])
 {
 	struct gps_location gl1 , gl2;
@@ -35,11 +37,8 @@ int main (int argc, char* argv[])
 	send_gps("$PSRF103,05,00,00,01*");
 	
 	// init write
-#define LOGNAME "log9.txt"
-	del(LOGNAME);
-	touch(LOGNAME);
-	write_start(LOGNAME, &fout);
-	
+	log_start(LOGNAME, &fout);
+
 	char in[128];
 	int i, j = 0;
 	char c = 0;
@@ -77,9 +76,9 @@ int main (int argc, char* argv[])
 				(int)(1.15*gl2.sog));
 				
 			// log first 50 points
-			write_add(&fout, (uint8_t*)in, strlen(in));
-			if (j++ >= 20) {
-				write_end(&fout);
+			log_add(&fout, &gl2);
+			if (j++ >= 40) {
+				log_end(&fout);
 				lcd_printf("done logging\n");
 				while (1) ;
 			}

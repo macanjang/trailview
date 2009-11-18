@@ -201,6 +201,7 @@ uint8_t mmc_init(void)
 	
 	// increase SPI clock to (Fosc/4)
 	SPCR &= ~3;
+	SPSR = 1;
 
 	return 0;
 }
