@@ -37,12 +37,12 @@ int gps_log_data(char * data, struct gps_location* loc);
  *of two GPS locations and returns the displacement
  *using the Vincenty formula, accurate to .5 mm
  */
-int gps_calc_disp(double lat1, double lon1, double lat2, double lon2, struct gps_displacement * gd);
+int gps_calc_disp(struct gps_location * gl1, struct gps_location * gl2, struct gps_displacement * gd);
 
 /*This function converts a lattitude (ddmm.mmmm)
  *or longitude dddmm.mmmm to decimal degrees
  */
-double dm_to_dd(double dm);	//lat ddmm.mmmm and lon dddmm.mmmm to decimal degrees 
+double dm_to_dd(double dm, char nsew);	//lat ddmm.mmmm and lon dddmm.mmmm to decimal degrees 
 
 /* For logging KML data */
 void log_start(const char * name, struct fatwrite_t * fwrite);

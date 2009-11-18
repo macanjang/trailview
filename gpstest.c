@@ -68,12 +68,12 @@ int main (int argc, char* argv[])
 			}
 		
 			// compute and display
-			gps_calc_disp(gl1.lat , gl1.lon , gl2.lat , gl2.lon , &gd);
+			gps_calc_disp(&gl1, &gl2, &gd);
 			lcd_printf("I: %d\xb2 F: %d\xb2\nMg: %dm Sp: %d",
 				(int)gd.initial_bearing,
 				(int)gd.final_bearing,
 				(int)gd.magnitude,
-				(int)(1.15*gl2.sog));
+				(int)(1.15*gl2.sog + 0.5));
 				
 			// log first 50 points
 			log_add(&fout, &gl2);

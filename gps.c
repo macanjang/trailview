@@ -88,12 +88,12 @@ int gps_log_data(char * data, struct gps_location * loc)
 	return 0;
 }
 
-int gps_calc_disp(double lat1, double lon1, double lat2, double lon2, struct gps_displacement * gd)
+int gps_calc_disp(struct gps_location * gl1, struct gps_location * gl2, struct gps_displacement * gd)
 {
-	lat1 = dm_to_dd(lat1);
-	lon1 = dm_to_dd(lon1);
-	lat2 = dm_to_dd(lat2);
-	lon2 = dm_to_dd(lon2);
+	double lat1 = dm_to_dd(gl1->lat, gl1->ns);
+	double lon1 = dm_to_dd(gl1->lon, gl1->ew);
+	double lat2 = dm_to_dd(gl2->lat, gl2->ns);
+	double lon2 = dm_to_dd(gl2->lon, gl2->ew);
 	
 	double a = 6378137;
 	double b = 6356752.3142;
@@ -140,17 +140,19 @@ int gps_calc_disp(double lat1, double lon1, double lat2, double lon2, struct gps
 	return 0;
 }
 
-double dm_to_dd(double dm)
+double dm_to_dd(double dm, char nsew)
 {
 	double dd = floor(dm/100);		//get rid of minutes
 	double mm = (dm - dd * 100) / 60;	//get rid of degrees and convert to decimal deg
 	//printf("dm: %f dd: %f mm: %f mm + dd: %f\n",dm,dd,mm,mm+dd);
-	return (mm + dd);			//add em up and return
+	return (mm + dd) * ((nsew == 'W' || nsew == 'S') ? -1 : 1);			//add em up and return
 }
 
 const char map_start[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<kml xmlns=\"http://earth.google.com/kml/2.0\">\n";
 const char map_end[] = "</kml>";
-const char map_pointstart[] = "<Placemark>\n<description>Waypoint</description><name>Waypoint</name>\n<Point>\n<coordinates>";
+const char map_pointstart[] = "<Placemark>\n<description>";
+const char map_pointmiddle[] = "</description><name>";
+const char map_pointname[] = "</name>\n<Point>\n<coordinates>";
 const char map_pointend[] = "</coordinates>\n</Point>\n</Placemark>\n\n";
 
 void ftostr(double f, char * buf, int n)
@@ -176,16 +178,24 @@ void log_end(struct fatwrite_t * fwrite)
 
 void log_add(struct fatwrite_t * fwrite, struct gps_location * gl)
 {
-	char buf[32];
+	char buf[128];
 	
 	write_add(fwrite, map_pointstart, sizeof(map_pointstart)-1);
 	
-	snprintf(buf, 32, "%.7f", dm_to_dd(gl->lon) * (gl->ew == 'W' ? -1 : 1));
+	// add speed
+	snprintf(buf, 128, "Speed: %.2fmph", gl->sog*1.5);	
 	write_add(fwrite, buf, strlen(buf));
+	write_add(fwrite, map_pointmiddle, sizeof(map_pointmiddle)-1);
+	
+	// add time
+	snprintf(buf, 128, "%u/%u/%u %u:%u:%u",
+			(gl->date/100)%100, gl->date/10000, gl->date%100,
+			((int)gl->time)/10000, (((int)gl->time)/100)%100, ((int)gl->time)%100);	
+	write_add(fwrite, buf, strlen(buf));
+	write_add(fwrite, map_pointname, sizeof(map_pointname)-1);
 
-	write_add(fwrite, ",", 1);
-
-	snprintf(buf, 32, "%.7f", dm_to_dd(gl->lat) * (gl->ns == 'N' ? 1 : -1));
+	// add coordinates
+	snprintf(buf, 64, "%.7f,%.7f", dm_to_dd(gl->lon, gl->ew), dm_to_dd(gl->lat, gl->ns));
 	write_add(fwrite, buf, strlen(buf));
 	
 	write_add(fwrite, map_pointend, sizeof(map_pointend)-1);
