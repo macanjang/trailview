@@ -12,6 +12,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include "lcd.h"
+#include "fat32.h"
 
 #define PLENGTH 16
 #define ITERATIONS 64
@@ -146,3 +147,47 @@ double dm_to_dd(double dm)
 	//printf("dm: %f dd: %f mm: %f mm + dd: %f\n",dm,dd,mm,mm+dd);
 	return (mm + dd);			//add em up and return
 }
+
+const char map_start[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<kml xmlns=\"http://earth.google.com/kml/2.0\">\n";
+const char map_end[] = "</kml>";
+const char map_pointstart[] = "<Placemark>\n<description>Waypoint</description><name>Waypoint</name>\n<Point>\n<coordinates>";
+const char map_pointend[] = "</coordinates>\n</Point>\n</Placemark>\n\n";
+
+void ftostr(double f, char * buf, int n)
+{
+	
+}
+
+void log_start(const char * name, struct fatwrite_t * fwrite)
+{
+	del(name);
+	touch(name);
+	write_start(name, fwrite);
+
+	write_add(fwrite, map_start, sizeof(map_start)-1);
+}
+
+void log_end(struct fatwrite_t * fwrite)
+{
+	write_add(fwrite, map_end, sizeof(map_end)-1);
+
+	write_end(fwrite);
+}
+
+void log_add(struct fatwrite_t * fwrite, struct gps_location * gl)
+{
+	char buf[32];
+	
+	write_add(fwrite, map_pointstart, sizeof(map_pointstart)-1);
+	
+	snprintf(buf, 32, "%.7f", dm_to_dd(gl->lon) * (gl->ew == 'W' ? -1 : 1));
+	write_add(fwrite, buf, strlen(buf));
+
+	write_add(fwrite, ",", 1);
+
+	snprintf(buf, 32, "%.7f", dm_to_dd(gl->lat) * (gl->ns == 'N' ? 1 : -1));
+	write_add(fwrite, buf, strlen(buf));
+	
+	write_add(fwrite, map_pointend, sizeof(map_pointend)-1);
+}
+

@@ -53,7 +53,7 @@ void touch(const char * s);
 /* routines for writing to empty files */
 
 char write_start(const char * s, struct fatwrite_t * fwrite);
-void write_add(struct fatwrite_t * fwrite, uint8_t * buf, int count);
+void write_add(struct fatwrite_t * fwrite, const char * buf, int count);
 void write_end(struct fatwrite_t * fwrite);
 
 /* the workhorse functions */

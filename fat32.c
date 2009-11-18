@@ -521,6 +521,7 @@ void touch(const char * s)
 				oldcluster = cluster;
 				cluster = fat_findempty();
 				fat_writenext(oldcluster, cluster);
+				fat_writenext(cluster, FAT_EOF);
 			}
 			
 			// read new sector
@@ -596,7 +597,7 @@ void write_add(struct fatwrite_t * fwrite, uint8_t * buf, int count)
 	}
 }*/
 
-void write_add(struct fatwrite_t * fwrite, uint8_t * buf, int count)
+void write_add(struct fatwrite_t * fwrite, const char * buf, int count)
 {
 	int i;
 	uint32_t oldcluster;
@@ -605,11 +606,16 @@ void write_add(struct fatwrite_t * fwrite, uint8_t * buf, int count)
 		// filled sector, write out
 		if (fwrite->sect_i >= 512) {
 			write_end(fwrite);
-			oldcluster = fwrite->cur_cluster;
-			fwrite->cur_cluster = fat_findempty();
-			fat_writenext(oldcluster, fwrite->cur_cluster);
-			fat_writenext(fwrite->cur_cluster, FAT_EOF);
-			
+			// new cluster
+			fwrite->sector_offset++;
+			if (fwrite->sector_offset >= fat.sectors_per_cluster) {
+				fwrite->sector_offset = 0;
+				oldcluster = fwrite->cur_cluster;
+				fwrite->cur_cluster = fat_findempty();
+				fat_writenext(oldcluster, fwrite->cur_cluster);
+				fat_writenext(fwrite->cur_cluster, FAT_EOF);
+			}
+
 			// new sector
 			fwrite->sect_i = 0;
 		}
