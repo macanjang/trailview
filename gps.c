@@ -148,8 +148,8 @@ double dm_to_dd(double dm, char nsew)
 	return (mm + dd) * ((nsew == 'W' || nsew == 'S') ? -1 : 1);			//add em up and return
 }
 
-const char map_start[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<kml xmlns=\"http://earth.google.com/kml/2.0\">\n";
-const char map_end[] = "</kml>";
+const char map_start[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<kml xmlns=\"http://earth.google.com/kml/2.0\">\n<Document>\n<name>Trailview Path</name>\n";
+const char map_end[] = "</Document>\n</kml>";
 const char map_pointstart[] = "<Placemark>\n<description>";
 const char map_pointmiddle[] = "</description><name>";
 const char map_pointname[] = "</name>\n<Point>\n<coordinates>";
