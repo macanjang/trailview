@@ -75,7 +75,7 @@ int main (int argc, char* argv[])
 				(int)gd.magnitude,
 				(int)(1.15*gl2.sog + 0.5));
 				
-			// log first 50 points
+			// log first 40 points
 			log_add(&fout, &gl2);
 			if (j++ >= 40) {
 				log_end(&fout);
