@@ -36,7 +36,7 @@ int readsector(uint32_t lba, uint8_t *buffer)
 {
 	int r;
 	if ((r = mmc_readsector(lba, buffer)))
-		lcd_printf("error reading sector\n");
+		lcd_printf("SD error:\nreading sector");
 	return r;
 }
 
@@ -45,7 +45,7 @@ int writesector(uint32_t lba, uint8_t *buffer)
 {
 	int r;
 	if ((r = mmc_writesector(lba, buffer)))
-		lcd_printf("error writing sector\n");
+		lcd_printf("SD error:\nwriting sector");
 	return r;
 }
 

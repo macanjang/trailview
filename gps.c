@@ -29,6 +29,7 @@ char gps_calcchecksum(const char * s)
 	return c;
 }
 
+/* Routine to fill raw GPS data into a gps_location struct */
 int gps_log_data(char * data, struct gps_location * loc)
 {
 	int i = 0;
@@ -87,6 +88,12 @@ int gps_log_data(char * data, struct gps_location * loc)
 	}
 	return 0;
 }
+
+
+
+/* --------------------------------------------------------------- */
+/* Routine for calculating GPS displacement down to 0.5mm accuracy */
+/* --------------------------------------------------------------- */
 
 int gps_calc_disp(struct gps_location * gl1, struct gps_location * gl2, struct gps_displacement * gd)
 {
@@ -147,6 +154,13 @@ double dm_to_dd(double dm, char nsew)
 	//printf("dm: %f dd: %f mm: %f mm + dd: %f\n",dm,dd,mm,mm+dd);
 	return (mm + dd) * ((nsew == 'W' || nsew == 'S') ? -1 : 1);			//add em up and return
 }
+
+
+
+
+/* ---------------------------------------------------- */
+/* Routines for logging gps data in KML formatted files */
+/* ---------------------------------------------------- */
 
 const char map_start[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<kml xmlns=\"http://earth.google.com/kml/2.0\">\n<Document>\n<name>Trailview Path</name>\n";
 const char map_end[] = "</Document>\n</kml>";
