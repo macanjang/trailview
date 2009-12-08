@@ -82,20 +82,47 @@ void camera_takephoto(const char * fname)
 	write_start(fname, &fwrite);
 
 	// receive packets
-	unsigned int i, j, tmpsize;
+	unsigned int i, j, k, tmpsize;
+	char c, c1, flag = 0, ff_flag = 0;
+	
 	for (i=0; i<packets; i++) {
 		camera_snd_cmd(CAMERA_ACK, 0, 0, i&0xff, (i>>8)&0xff);
 		
-		for (j=0; j<256; j++) {
-			pbuf[j] = camera_rxbyte();
+		camera_rxbyte();
+		camera_rxbyte();
+
+		c = camera_rxbyte();
+		c1 = camera_rxbyte();
+
+		tmpsize = (unsigned int)c1 | (((unsigned int)c)<<8);
+
+		j=0;
+		for (k=0; k<512-6; k++) {
+			c = camera_rxbyte();
+
+			if (flag == 1) pbuf[j++] = c;
+		
+			// only record between start and end jpeg markers
+			if (ff_flag) {
+				if (pbuf[j] == 0xd9) flag = 2;
+				else if (pbuf[j] == 0xd8) {
+					flag = 1;
+					pbuf[j++] = 0xff;
+					pbuf[j++] = 0xd8;
+				}
+				ff_flag = 0;
+			}
+			if (pbuf[j] == 0xff) ff_flag = 1;
 		}
 
-		tmpsize = (unsigned int)pbuf[2] | (((unsigned int)pbuf[3])<<8);
-		write_add(&fwrite, pbuf+4, tmpsize);
+		camera_rxbyte();
+		camera_rxbyte();
+		
+		write_add(&fwrite, pbuf, j);
 	}
 	
+	// finish
 	camera_snd_cmd(CAMERA_ACK, 0, 0, 0xf0, 0xf0);
-
 	write_end(&fwrite);
 }
 
