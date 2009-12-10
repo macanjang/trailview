@@ -78,83 +78,63 @@ void camera_init(void)
 void camera_takephoto(const char * fname)
 {
 	struct fatwrite_t fwrite;
-	unsigned char pbuf[512];
+	unsigned char pbuf[128];
 	char cmdbuf[6];
+	uint32_t psize;
+	int packets;
 
 		
 	lcd_printf("Taking Photo\n");
 	
-	// take photo
-	camera_snd_cmd(CAMERA_SNAPSHOT, 0, 0, 0, 0);
-	camera_rcv_cmd(cmdbuf);
-	_delay_ms(500);
+	// take photo and get size
+	do {
+		// clear buffer
+		camera_readpos = camera_writepos;
+
+		// take photo
+		camera_snd_cmd(CAMERA_SNAPSHOT, 0, 0, 0, 0);
+		camera_rcv_cmd(cmdbuf);
+		_delay_ms(500);
 	
-	lcd_printf("Getting Size\n");
+		lcd_printf("Getting Size\n");
 
-	// get snapshot and size
-	camera_snd_cmd(CAMERA_GETPIC, 0x01, 0, 0, 0);
-	camera_rcv_cmd(cmdbuf);
-	camera_rcv_cmd(cmdbuf);
+		// get snapshot and size
+		camera_snd_cmd(CAMERA_GETPIC, 0x01, 0, 0, 0);
+		camera_rcv_cmd(cmdbuf);
+		camera_rcv_cmd(cmdbuf);
 
-	uint32_t psize = cmdbuf[3] | (((uint32_t)cmdbuf[4])<<8) | (((uint32_t)cmdbuf[5])<<16);
-	int packets = psize/(128-6);
-
-	lcd_printf("Packets:\n%d", packets);
-	_delay_ms(1000);
+		psize = cmdbuf[3] | (((uint32_t)cmdbuf[4])<<8) | (((uint32_t)cmdbuf[5])<<16);
+		packets = psize/(128-6);// + (psize%(128-6) ? 1 : 0);
+	} while (packets > 500);
 	
-	// create file	
+	// create file
 	del(fname);
 	touch(fname);
 	write_start(fname, &fwrite);
 	
-	lcd_printf("Getting Packets");
-	lcd_go_line(1);
+	lcd_printf("Packets: %d\n", packets);
 
 	// receive packets
-	unsigned int i, j, k, tmpsize;
-	char c, flag = 0, ff_flag = 0;
+	unsigned int i, packet_size, packet_id;
 	
 	for (i=0; i<packets; i++) {
-		_delay_ms(10);
+		//_delay_ms(10);
+		lcd_go_line(1);
 		lcd_print_int(i);
 		camera_snd_cmd(CAMERA_ACK, 0, 0, i&0xff, (i>>8)&0xff);
-		
-		//camera_rxbyte();
-		//camera_rxbyte();
+		camera_rcv(pbuf, 128);
 
-		//c = camera_rxbyte();
-		//c1 = camera_rxbyte();
-		c = 0;
-		c1 = 0;
-
-		tmpsize = (unsigned int)c1 | (((unsigned int)c)<<8);
-
-		j=0;
-		for (k=0; k<512-6; k++) {
-			//c = camera_rxbyte();
-
-			/*if (flag == 1) */pbuf[j++] = c;
-		
-			// only record between start and end jpeg markers
-			/*if (ff_flag) {
-				if (pbuf[j] == 0xd9) flag = 2;
-				else if (pbuf[j] == 0xd8) {
-					flag = 1;
-					pbuf[j++] = 0xff;
-					pbuf[j++] = 0xd8;
-				}
-				ff_flag = 0;
-			}
-			if (pbuf[j] == 0xff) ff_flag = 1;*/
+		packet_id = (unsigned int)pbuf[0] | (((unsigned int)pbuf[1])<<8);
+		packet_size = (unsigned int)pbuf[2] | (((unsigned int)pbuf[3])<<8);
+		if (packet_id != i) {
+			lcd_printf("camera error:\npacket %d!=%d", packet_id, i);
+			while (1) ;
 		}
-
-		//camera_rxbyte();
-		//camera_rxbyte();
 		
-		write_add(&fwrite, (char *)pbuf, j);
+		write_add(&fwrite, (char *)(pbuf+4), packet_size);
 	}
 	
-	lcd_printf("Finished");
+	lcd_printf("camera:\nfinished");
 	
 	// finish
 	camera_snd_cmd(CAMERA_ACK, 0, 0, 0xf0, 0xf0);
@@ -171,6 +151,15 @@ char camera_response(void)
 {
 	if (camera_writepos - camera_readpos >= 6) return 1;
 	return 0;
+}
+
+void camera_rcv(unsigned char * buf, int n)
+{
+	int i;
+	for (i=0; i<n; i++) {
+		while (!CAMERA_DATAREADY()) ;
+		buf[i] = CAMERA_READBYTE();
+	}
 }
 
 void camera_rcv_cmd(char * cmdbuf)
