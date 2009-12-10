@@ -21,9 +21,10 @@ int main (int argc, char* argv[])
 	gps_init_serial();
 	lcd_init();
 	camera_init();
+	lcd_printf("sd card:\nconnecting");
 	char rt = mmc_init();
 	if (rt) {
-		lcd_printf("sd card error\n");
+		lcd_printf("sd card: error\n");
 		while (1) ;
 	}
 	
@@ -39,9 +40,7 @@ int main (int argc, char* argv[])
 	send_gps("$PSRF103,05,00,00,01*");
 
 	// test camera
-	lcd_printf("camera test\n");
 	camera_takephoto("pic.jpg");
-	lcd_printf("camera done\n");
 
 	// init write
 	log_start(LOGNAME, &fout);

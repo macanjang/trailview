@@ -9,8 +9,8 @@ void camera_init(void);
 void camera_takephoto(const char * fname);
 void camera_txbyte(char c);
 char camera_response(void);
-void camera_rcv_cmd(char * cmdbuf);
+void camera_rcv_cmd(unsigned char * cmdbuf);
 void camera_rcv(unsigned char * buf, int n);
-void camera_snd_cmd(char b2, char b3, char b4, char b5, char b6);
+void camera_snd_cmd(char cmd, char b3, char b4, char b5, char b6);
 
 #endif
