@@ -176,6 +176,15 @@ int lcd_print_int(signed int i)
 	return r;
 }
 
+void lcd_print_hex(char n)
+{
+	unsigned char t;
+	t = (n>>4)&0xf;
+	lcd_wdata(t + (t < 10 ? '0' : 'a' - 10));
+	t = n&0xf;
+	lcd_wdata(t + (t < 10 ? '0' : 'a' - 10));
+}
+
 void lcd_init_seq(void)
 {
 	sleep(30); // wait at least 15 ms

@@ -8,6 +8,7 @@
 #include "lcd.h"
 #include "fat32.h"
 #include "sdcard.h"
+#include "camera.h"
 
 #define LOGNAME "log.kml"
 
