@@ -5,7 +5,7 @@
 #include "fat32.h"
 
 struct gps_location {
-	double time;		//time of GPS data query hhmmss.sss
+	char time[16];		//time of GPS data query hhmmss.sss
 	char status;		//A=valid V=invalid
 	double lat;		//lattitude ddmm.mmmm
 	char ns;		//'N'=north 'S'=south
@@ -13,7 +13,7 @@ struct gps_location {
 	char ew;		//'E'=east 'W'=west
 	double sog;		//speed over ground knots
 	double cog;		//course over ground degrees 
-	int date;		//ddmmyy
+	char date[16];		//ddmmyy
 };
 
 struct gps_displacement {
@@ -33,6 +33,9 @@ char gps_calcchecksum(const char * s);
  */
 int gps_log_data(char * data, struct gps_location* loc);
 
+/*This function disables unwanted gps signals */
+void gps_disablesignals(void);
+
 /*This function takes the latitudes and longitudes
  *of two GPS locations and returns the displacement
  *using the Vincenty formula, accurate to .5 mm
@@ -45,8 +48,8 @@ int gps_calc_disp(struct gps_location * gl1, struct gps_location * gl2, struct g
 double dm_to_dd(double dm, char nsew);	//lat ddmm.mmmm and lon dddmm.mmmm to decimal degrees 
 
 /* For logging KML data */
-void log_start(const char * name, struct fatwrite_t * fwrite);
+void log_start(struct fatwrite_t * fwrite);
 void log_end(struct fatwrite_t * fwrite);
-void log_add(struct fatwrite_t * fwrite, struct gps_location * gl);
+void log_add(struct fatwrite_t * fwrite, struct gps_location * gl, struct gps_displacement * gd);
 
 #endif
