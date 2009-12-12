@@ -150,7 +150,7 @@ void camera_takephoto(const char * fname)
 	
 	// finish
 	camera_snd_cmd(CAMERA_ACK, 0, 0, 0xf0, 0xf0);
-	write_add(&fwrite, CAMERA_JPGENDMARKER, 2);
+	write_add(&fwrite, (char *)CAMERA_JPGENDMARKER, 2);
 	write_end(&fwrite);
 	
 	lcd_printf("camera: saved %d\n", camera_writepos - camera_readpos);
