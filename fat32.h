@@ -38,6 +38,7 @@ struct fatwrite_t
 	uint32_t dir;
 	uint8_t buf[512];
 	char name[11];
+	int value;
 };
 
 /* the user level functions */
@@ -50,6 +51,7 @@ void cat(const char * s);
 char exists(const char * s);
 void touch(const char * s);
 char mkdir(const char * dirname);
+int dir_highestnumbered(void);
 
 /* routines for writing to empty files */
 

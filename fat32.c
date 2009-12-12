@@ -23,6 +23,7 @@ static struct fat32fs_t fat;
 static struct fat32dirent_t ret_file;
 static struct fat32dirent_t cur_dir;
 static const char* fncmp;
+static int ret_value;
 
 /* shared sector buffers */
 /* each routine is responsible for writing its own buffer modifications to memory */
@@ -326,6 +327,20 @@ char find_emptyslot(struct fat32dirent_t* de)
 	else return 0;
 }
 
+/* finds the highest numbered dirent */
+char find_highest(struct fat32dirent_t* de)
+{
+	int i, num = 0;
+	if (de->filename[0] >= '0' && de->filename[0] <= '9') {
+		for (i=0; i<8; i++) {
+			if (de->filename[i] < '0' || de->filename[i] > '9') break;
+			num = num * 10 + de->filename[i] - '0';
+		}
+		if (num > ret_value) ret_value = num;
+	}
+	return 0;
+}
+
 /* calls a subroutine for each dirent in the directory */
 void loop_dir(uint32_t fcluster, char (*funct)(struct fat32dirent_t*))
 {
@@ -370,7 +385,7 @@ void loop_dir(uint32_t fcluster, char (*funct)(struct fat32dirent_t*))
 	} while (d.type != DIRENT_END);
 }
 
-/* calls a subroutine for each dirent in the directory */
+/* calls a subroutine for each sector in the file */
 void loop_file(uint32_t fcluster, int size, void (*funct)(uint8_t *, int))
 {
 	uint32_t cluster = fcluster;
@@ -505,7 +520,7 @@ void touch(const char * s)
 	// write filesize
 	GET32(cur_line + 0x1c) = 0;
 	
-	// write EOF to first cluster
+	// write EOF as first cluster
 	GET16(cur_line + 0x14) = FAT_EOF>>16;
 	GET16(cur_line + 0x1a) = 0xffff;
 
@@ -606,6 +621,13 @@ char mkdir(const char * dirname)
 	return 0;
 }
 
+int dir_highestnumbered(void)
+{
+	ret_value = 0;
+	loop_dir(cur_dir.cluster, find_highest);
+	return ret_value;
+}
+
 /* routines for writing to empty files created with touch() */
 
 char write_start(const char * s, struct fatwrite_t * fwrite)
@@ -625,7 +647,8 @@ char write_start(const char * s, struct fatwrite_t * fwrite)
 	fwrite->sect_i = 0;
 	fwrite->sector_offset = 0;
 	fwrite->size = 0;
-	
+	fwrite->value = 0;
+
 	fwrite->cur_cluster = fwrite->f_cluster = fat_findempty();
 	fwrite->dir = cur_dir.cluster;
 	// lay claim to the cluster
