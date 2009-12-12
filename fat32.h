@@ -49,6 +49,7 @@ void del(const char * s);
 void cat(const char * s);
 char exists(const char * s);
 void touch(const char * s);
+char mkdir(const char * dirname);
 
 /* routines for writing to empty files */
 

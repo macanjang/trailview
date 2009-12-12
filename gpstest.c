@@ -29,6 +29,11 @@ int main (int argc, char* argv[])
 	}
 	
 	init_partition(0);
+
+	lcd_printf("creating\ndirectory");
+	mkdir("newdir");
+	lcd_printf("done\n");
+	while (1) ;
 	
 	// disable unwanted GPS signals (set rate to 0)
 	// $PSRF103,<msg>,<mode>,<rate>,<cksumEn>*CKSUM<CR><LF>

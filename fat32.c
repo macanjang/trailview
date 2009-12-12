@@ -11,6 +11,7 @@
 #define GET32(p) (*((uint32_t*)(p)))
 #define GET16(p) (*((uint16_t*)(p)))
 #define FAT_EOF 0x0ffffff8
+#define FAT_DIRATTRIB 0x10
 
 /* the global fat32 fs structure */
 static struct fat32fs_t fat;
@@ -208,10 +209,10 @@ int init_partition(int part)
 	
 	// read MBR
 	if (readsector(0, sect)) {
-		lcd_printf("error: problem reading sector\n");
+		lcd_printf("error: problem\nreading sector");
 		return 1;	
 	} else {
-		lcd_printf("init part #%d", part + 1);
+		lcd_printf("init part. #%d\n", part + 1);
 	}
 	
 	// sanity check
@@ -223,7 +224,7 @@ int init_partition(int part)
 	// check if partition is fat32
 	p = sect + 446 + part*16;
 	if (p[4] != 0x0b && p[4] != 0x0c) {
-		lcd_printf("error: not FAT32\ntype: ", p[4]);
+		lcd_printf("error: not FAT32\n");
 		return 3;
 	}
 	
@@ -542,6 +543,67 @@ void touch(const char * s)
 	// whatever just happened, the sector needs to be synced
 	writesector(cur_sect, sect);
 
+}
+
+/* creates a directory in the current working directory */
+/* returns 0 on success, true on failure*/
+char mkdir(const char * dirname)
+{
+	// fail if the filename is in use, otherwise create it
+	if (exists(dirname)) return -1;
+	touch(dirname);
+
+	fncmp = str_to_fat(dirname);
+	loop_dir(cur_dir.cluster, find_dirent);
+	if (!IS_FILE(ret_file)) return -2;
+
+	// get an empty cluster
+	uint32_t tmp_fat = fat_findempty();
+	fat_writenext(tmp_fat, FAT_EOF);
+	
+	// set directory bits and point to cluster
+	GET16(cur_line + 0x14) = tmp_fat>>16;
+	GET16(cur_line + 0x1a) = tmp_fat;
+	cur_line[0x0b] = FAT_DIRATTRIB;
+	writesector(cur_sect, sect);
+
+	// remember the current directory so it can be linked back to
+	uint32_t bdir_cluster = cur_dir.cluster;
+
+	// create "."
+	cur_sect = CLUSTER(tmp_fat);
+	sect[0] = 0x00;
+	writesector(cur_sect, sect);
+	
+	cur_dir.cluster = tmp_fat;
+	touch(".");
+	cur_line = sect;
+
+	// set directory bits and point to self
+	GET16(cur_line + 0x14) = tmp_fat>>16;
+	GET16(cur_line + 0x1a) = tmp_fat;
+	cur_line[0x0b] = FAT_DIRATTRIB;
+	
+	writesector(cur_sect, sect);
+
+	// create ".."
+	touch("..");
+	cur_line = sect + 32;
+	
+	// set directory bits and point to cluster
+	GET16(cur_line + 0x14) = bdir_cluster>>16;
+	GET16(cur_line + 0x1a) = bdir_cluster;
+	cur_line[0x0b] = FAT_DIRATTRIB;
+	
+	cur_line = sect + 64;
+	cur_line[0] = 0x00;
+
+	writesector(cur_sect, sect);
+
+	// return to original directory
+	cur_dir.cluster = bdir_cluster;
+
+	return 0;
 }
 
 /* routines for writing to empty files created with touch() */
