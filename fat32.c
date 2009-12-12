@@ -567,7 +567,7 @@ char mkdir(const char * dirname)
 	cur_line[0x0b] = FAT_DIRATTRIB;
 	writesector(cur_sect, sect);
 
-	// remember the current directory so it can be linked back to
+	// remember the current directory for creating ".." and getting back
 	uint32_t bdir_cluster = cur_dir.cluster;
 
 	// create "."
