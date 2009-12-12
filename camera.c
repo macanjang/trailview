@@ -17,6 +17,9 @@
 #define CAMERA_GETPIC 0x04
 #define CAMERA_DATA 0x0a
 
+// jpg file end marker
+unsigned char CAMERA_JPGENDMARKER[] = {0xff, 0xd9};
+
 // interrupt populated circular buffer
 #define CAMERA_DATAREADY() (camera_readpos != camera_writepos)
 #define CAMERA_READBYTE() (camera_buf[camera_readpos++])
@@ -97,7 +100,7 @@ void camera_takephoto(const char * fname)
 	// take photo
 	camera_snd_cmd(CAMERA_SNAPSHOT, 0, 0, 0, 0);
 	camera_rcv_cmd(cmdbuf);
-	_delay_ms(100);
+	_delay_ms(50);
 
 	// get snapshot and size
 	camera_snd_cmd(CAMERA_GETPIC, 0x01, 0, 0, 0);
@@ -105,7 +108,7 @@ void camera_takephoto(const char * fname)
 	camera_rcv_cmd(cmdbuf);
 
 	psize = cmdbuf[3] | (((uint32_t)cmdbuf[4])<<8) | (((uint32_t)cmdbuf[5])<<16);
-	packets = psize/(128-6);
+	packets = psize/(128-6);// + (psize%(128-6) ? 1 : 0);
 	load_bar = packets/16;
 	
 	// create file
@@ -123,8 +126,8 @@ void camera_takephoto(const char * fname)
 		_delay_ms(10);
 		
 		// draw progress bar
-		if (!(i%load_bar)) lcd_wdata('=');
-		//lcd_go_line(1);
+		if (i && !(i%load_bar)) lcd_wdata('=');
+		//lcd_go_line(1); // debug
 		//lcd_print_int(i);
 
 		// request next packet
@@ -145,11 +148,13 @@ void camera_takephoto(const char * fname)
 		write_add(&fwrite, (char *)(pbuf+4), packet_size);
 	}
 	
-	lcd_printf("camera: saved\n");
-	
 	// finish
 	camera_snd_cmd(CAMERA_ACK, 0, 0, 0xf0, 0xf0);
+	write_add(&fwrite, CAMERA_JPGENDMARKER, 2);
 	write_end(&fwrite);
+	
+	lcd_printf("camera: saved %d\n", camera_writepos - camera_readpos);
+	_delay_ms(1000);
 }
 
 // send a single byte to the camera

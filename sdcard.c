@@ -199,7 +199,7 @@ uint8_t mmc_init(void)
 	
 	mmc_clock_and_release();
 	
-	// increase SPI clock to (Fosc/4)
+	// increase SPI clock to (Fosc/2)
 	SPCR &= ~3;
 	SPSR = 1;
 
