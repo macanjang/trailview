@@ -33,9 +33,6 @@ char gps_calcchecksum(const char * s);
  */
 int gps_log_data(char * data, struct gps_location* loc);
 
-/*This function disables unwanted gps signals */
-void gps_disablesignals(void);
-
 /*This function takes the latitudes and longitudes
  *of two GPS locations and returns the displacement
  *using the Vincenty formula, accurate to .5 mm
@@ -45,11 +42,15 @@ int gps_calc_disp(struct gps_location * gl1, struct gps_location * gl2, struct g
 /*This function converts a lattitude (ddmm.mmmm)
  *or longitude dddmm.mmmm to decimal degrees
  */
-double dm_to_dd(double dm, char nsew);	//lat ddmm.mmmm and lon dddmm.mmmm to decimal degrees 
+double dm_to_dd(double dm, char nsew);	//lat ddmm.mmmm and lon dddmm.mmmm to decimal degrees
+
+/* disables the sending of GPS data we don't need (set rate to 0) */
+void gps_disable_unwanted(void);
 
 /* For logging KML data */
 void log_start(struct fatwrite_t * fwrite);
 void log_end(struct fatwrite_t * fwrite);
-void log_add(struct fatwrite_t * fwrite, struct gps_location * gl, struct gps_displacement * gd);
+void log_add(struct fatwrite_t * fwrite, struct gps_location * gl, struct gps_displacement * gd, const char * img_name);
+const char * gps_gen_name(unsigned int n);
 
 #endif

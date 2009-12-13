@@ -16,6 +16,7 @@
 #define CAMERA_SNAPSHOT 0x05
 #define CAMERA_GETPIC 0x04
 #define CAMERA_DATA 0x0a
+#define CAMERA_SLEEP 0x09
 
 // jpg file end marker
 unsigned char CAMERA_JPGENDMARKER[] = {0xff, 0xd9};
@@ -24,13 +25,13 @@ unsigned char CAMERA_JPGENDMARKER[] = {0xff, 0xd9};
 #define CAMERA_DATAREADY() (camera_readpos != camera_writepos)
 #define CAMERA_READBYTE() (camera_buf[camera_readpos++])
 volatile unsigned char camera_readpos, camera_writepos;
-volatile char camera_buf[256];
+volatile unsigned char camera_buf[130];
 
 // camera initialization routine
 void camera_init(void)
 {
 	UBRR1H = 0;
-	UBRR1L = 34; // BAUD FOR 8MHZ SYSTEM CLOCK
+	UBRR1L = 34; // BAUD FOR 8MHZ SYSTEM CLOCK (34 is a solid value)
 	UCSR1C = (3<<UCSZ10);  // 8 BIT NO PARITY 1 STOP
 	UCSR1B = (1<<RXCIE1)|(1<<RXEN1)|(1<<TXEN1); // ENABLE TX AND RX ALSO 8 BIT and INTERRUPT
 
@@ -42,7 +43,7 @@ void camera_init(void)
 	camera_readpos = 0;
 	camera_writepos = 0;
 	
-	lcd_printf("camera: init\n");
+	lcd_printf("camera: syncing\n");
 
 	int i = 61;
 	do {
@@ -67,32 +68,35 @@ void camera_init(void)
 		while (1) ;
 		return;
 	} else {
-		lcd_printf("camera: synced!\n");
+		//lcd_printf("camera: synced!\n");
 	}
 
 	camera_snd_cmd(CAMERA_ACK, CAMERA_SYNC, 0, 0, 0);
 	
 	// set picture settings
-	lcd_printf("camera: set");
+	//lcd_printf("camera: set");
 	camera_snd_cmd(CAMERA_INITIAL, 0, 0x07, 0x03, 0x07); // JPEG, 640 x 480
 	camera_rcv_cmd(cmdbuf);
 
-	lcd_printf("camera: pkgsize");
+	//lcd_printf("camera: pkgsize");
 	camera_snd_cmd(CAMERA_PKGSIZE, 0x08, 0x80, 0x00, 0x00); // pkg size 128 bytes
 	camera_rcv_cmd(cmdbuf);
 }
 
-// takes a photo and saves it as fname in the current directory
-void camera_takephoto(const char * fname)
+void camera_sleep(void)
 {
-	struct fatwrite_t fwrite;
-	unsigned char pbuf[128];
+	camera_snd_cmd(CAMERA_SLEEP, 0, 0, 0, 0);
+}
+
+// takes a photo and saves it as fname in the current directory
+void camera_takephoto(const char * fname, struct fatwrite_t * fwrite)
+{
 	unsigned char cmdbuf[6];
 	uint32_t psize;
 	unsigned int packets = 0, load_bar = 0;
 
 		
-	lcd_printf("camera:\nTaking Photo");
+	lcd_printf("camera: photo");
 	
 	// clear buffer
 	camera_readpos = camera_writepos;
@@ -114,7 +118,7 @@ void camera_takephoto(const char * fname)
 	// create file
 	del(fname);
 	touch(fname);
-	write_start(fname, &fwrite);
+	write_start(fname, fwrite);
 	
 	lcd_printf("Saving: %dkB\n", (unsigned int)(psize/1024));
 	lcd_go_line(1);
@@ -131,30 +135,31 @@ void camera_takephoto(const char * fname)
 		//lcd_print_int(i);
 
 		// request next packet
+		camera_readpos = camera_writepos = 0;
 		camera_snd_cmd(CAMERA_ACK, 0, 0, i&0xff, (i>>8)&0xff);
-		camera_rcv(pbuf, 128);
+		camera_rcv(128);
 
 		// get packet id and size from packet
-		packet_id = (unsigned int)pbuf[0] | (((unsigned int)pbuf[1])<<8);
-		packet_size = (unsigned int)pbuf[2] | (((unsigned int)pbuf[3])<<8);
+		packet_id = (unsigned int)camera_buf[0] | (((unsigned int)camera_buf[1])<<8);
+		packet_size = (unsigned int)camera_buf[2] | (((unsigned int)camera_buf[3])<<8);
 		
 		// error out if we lose a packet
 		if (packet_id != i) {
-			lcd_printf("camera error:\npacket %d!=%d", packet_id, i);
+			lcd_printf("camera error:\npacket");
 			while (1) ;
 		}
 		
 		// write to file
-		write_add(&fwrite, (char *)(pbuf+4), packet_size);
+		write_add(fwrite, (char *)(camera_buf+4), packet_size);
 	}
 	
 	// finish
 	camera_snd_cmd(CAMERA_ACK, 0, 0, 0xf0, 0xf0);
-	write_add(&fwrite, (char *)CAMERA_JPGENDMARKER, 2);
-	write_end(&fwrite);
+	write_add(fwrite, (char*)CAMERA_JPGENDMARKER, 2);
+	write_end(fwrite);
 	
-	lcd_printf("camera: saved %d\n", camera_writepos - camera_readpos);
-	_delay_ms(1000);
+	lcd_printf("camera: saved\n");
+	_delay_ms(200);
 }
 
 // send a single byte to the camera
@@ -172,13 +177,15 @@ char camera_response(void)
 }
 
 // receive a packet of data from the camera
-void camera_rcv(unsigned char * buf, int n)
+unsigned char camera_rcv(int n)
 {
 	int i;
+	unsigned char r = camera_readpos;
 	for (i=0; i<n; i++) {
 		while (!CAMERA_DATAREADY()) ;
-		buf[i] = CAMERA_READBYTE();
+		camera_readpos++;
 	}
+	return r;
 }
 
 // receive a command from the camera

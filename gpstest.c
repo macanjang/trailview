@@ -1,8 +1,12 @@
-//Some test code for gps data transmission and communication
-
+/* Trailview GPS logger system
+ * Craig Harrison & Zach Norrison
+ * 12/13/2009
+ */
+ 
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
+#include <stdlib.h>
 #include "gps.h"
 #include "serialgps.h"
 #include "lcd.h"
@@ -10,7 +14,6 @@
 #include "sdcard.h"
 #include "camera.h"
 
-const char loading_map[] = {'-', '\\', '|', '/'};
 void init_logtoggle(void);
 #define CHECK_LOGTOGGLE() (PIND&0x80)
 
@@ -22,79 +25,92 @@ int main (int argc, char* argv[])
 	char logging_state = 0;
 	char flag_reset = 0;
 
-	char in[128];
-	int i;
-	char c = 0;
-	
-	/* initialization sequences */
 	gps_init_serial();
 	lcd_init();
 	camera_init();
+	camera_sleep();
 	lcd_printf("sd card:\nconnecting");
-	c = mmc_init();
-	if (c) {
+	char rt = mmc_init();
+	if (rt) {
 		lcd_printf("sd card: error\n");
 		while (1) ;
 	}
+	
 	init_partition(0);
-	gps_disablesignals();
 	init_logtoggle();
+	lcd_printf("GPS ...");
 
-	/* main loop */
+	gps_disable_unwanted();
 
-	// wait until receiving valid locations
-	do {
-		receive_str(in);
-		gps_log_data(in , &gl1);
-		lcd_printf("GPS Fixing %c\n", loading_map[(c++)&0x3]);
-	} while (gl1.status != 'A');
+	char in[64];
+	int i, img_counter = 0;
+	char c = 0;
+	char loading_map[] = {'-', '\\', '|', '/'};
+	const char * fpic;
 
-	// got fix
-	lcd_printf("Acquired Fix");
-
-	/* main loop */
 	while (1) {
-		// read in gps data
-		receive_str(in);
-		if (flag_reset) {
-			gps_log_data(in, &gl1);
-			flag_reset = 0;
-		}
-		i = gps_log_data(in , &gl2);
-	
-		// check for fix
-		if (gl2.status != 'A') {
-			lcd_printf("Lost GPS Fix %c\n", loading_map[(c++)&0x3]);
-			continue;
-		}
-	
-		// compute displacement and display
-		gps_calc_disp(&gl1, &gl2, &gd);
-		lcd_printf("I: %d\xb2 F: %d\xb2\nMg: %dm Sp: %d",
-			(int)gd.initial_bearing,
-			(int)gd.final_bearing,
-			(int)gd.magnitude,
-			(int)(1.15*gl2.sog + 0.5));
-			
-		// log data
-		if (logging_state) {
-			if (!CHECK_LOGTOGGLE()) {
-				// end log
-				logging_state = 0;
-				log_end(&fout);
-				lcd_printf("log: finished\n");
-			}
-			// add to log
-			log_add(&fout, &gl2, &gd);
-		} else if (CHECK_LOGTOGGLE()) {
-			// start logging
-			lcd_printf("log: starting\n");
-			logging_state = 1;
-			flag_reset = 1;
-			log_start(&fout);
-		}
-	}
 
+		// wait until valid location
+		do {
+			receive_str(in);
+			gps_log_data(in , &gl1);
+			lcd_printf("GPS Fixing %c\n", loading_map[(c++)&0x3]);
+		} while (gl1.status != 'A');
+	
+		// got fix
+		lcd_printf("Acquired Fix");
+
+		// compute displacement
+		while (1) {
+			// read in gps data
+			receive_str(in);
+			if (flag_reset) {
+				// reset waypoint
+				gps_log_data(in, &gl1);
+				flag_reset = 0;
+			}
+			i = gps_log_data(in , &gl2);
+			
+			// end log
+			if (logging_state && !CHECK_LOGTOGGLE()) {
+					logging_state = 0;
+					lcd_printf("log: finishing..\n");
+					log_end(&fout);
+			}
+		
+			// check if we have a fix
+			if (gl2.status != 'A') {
+				lcd_printf("Lost GPS Fix %c\n", loading_map[(c++)&0x3]);
+				continue;
+			}
+		
+			// compute and display gps data
+			gps_calc_disp(&gl1, &gl2, &gd);
+			lcd_printf("I: %d\xb2 F: %d\xb2\nMg: %dm Sp: %d",
+				(int)gd.initial_bearing,
+				(int)gd.final_bearing,
+				(int)gd.magnitude,
+				(int)(1.15*gl2.sog + 0.5));
+			
+			// start / update logging
+			if (logging_state) {
+				// add to log
+				fpic = gps_gen_name(img_counter++);
+				camera_init();
+				camera_takephoto(fpic, &fout);
+				camera_sleep();
+				log_add(&fout, &gl2, &gd, fpic);
+			} else if (CHECK_LOGTOGGLE()) {
+				// start logging
+				logging_state = 1;
+				flag_reset = 1;
+				img_counter = 0;
+				log_start(&fout);
+			}
+		}
+
+	}
+	
 	return 0;
 }
 
