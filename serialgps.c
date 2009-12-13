@@ -26,7 +26,7 @@ void send_str(const char * s)
 {
 	while (*s) send_char(*s++);
 }
-
+/*
 void send_nstr(const char * s, int len)
 {
 	while (*s != '\0' && len--) send_char(*s++);
@@ -83,7 +83,7 @@ void send_long(uint32_t n)
 	} while (n && i >= 0);
 	send_str(buf + i + 1);
 }
-
+*/
 void send_hexbyte(unsigned char n)
 {
 	unsigned char t;
@@ -92,7 +92,7 @@ void send_hexbyte(unsigned char n)
 	t = n&0xf;
 	send_char(t + (t < 10 ? '0' : 'a' - 10));
 }
-
+/*
 void dump_sector(const unsigned char * p)
 {
 	int i;
@@ -124,7 +124,7 @@ uint32_t receive_long(void)
 	}
 	return r;
 }
-
+*/
 void receive_str(char * buf)
 {
 	char c;

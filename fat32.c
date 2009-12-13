@@ -24,9 +24,11 @@ static struct fat32dirent_t ret_file;
 static struct fat32dirent_t cur_dir;
 static const char* fncmp;
 static int ret_value;
+static uint32_t ret_lcluster;
 
 /* shared sector buffers */
 /* each routine is responsible for writing its own buffer modifications to memory */
+/* these buffers are provided merely for convience and to save on memory usage */
 static uint8_t sect[512];
 static uint32_t cur_sect;
 static uint8_t* cur_line;
@@ -278,6 +280,13 @@ int init_partition(int part)
 	return 0;
 }
 
+/* dummy loop file routine */
+void loop_file_all(uint8_t* s, int n)
+{
+
+}
+
+#if 0 // debugging
 /* prints a text sector */
 void print_sect(uint8_t* s, int n)
 {
@@ -296,6 +305,7 @@ char print_dirent(struct fat32dirent_t* de)
 	
 	return 0;
 }
+#endif
 
 /* finds a dirent by name */
 char find_dirent(struct fat32dirent_t* de)
@@ -391,6 +401,7 @@ void loop_file(uint32_t fcluster, int size, void (*funct)(uint8_t *, int))
 	uint32_t cluster = fcluster;
 	uint32_t fsect = cur_sect = CLUSTER(fcluster);
 	uint32_t n = size;
+	ret_lcluster = cluster;
 	
 	// loop through all sectors
 	while (1) {
@@ -398,6 +409,7 @@ void loop_file(uint32_t fcluster, int size, void (*funct)(uint8_t *, int))
 	
 		// get next cluster from fat
 		if (cur_sect - fsect >= fat.sectors_per_cluster) {
+			ret_lcluster = cluster;
 			cluster = fat_readnext(cluster);
 			cur_sect = fsect = CLUSTER(cluster);
 		}
@@ -420,10 +432,12 @@ void loop_file(uint32_t fcluster, int size, void (*funct)(uint8_t *, int))
 /* higher level fs routines */
 /* they do about what you would expect of them */
 
+#if 0 // debugging
 void ls(void)
 {
 	loop_dir(cur_dir.cluster, print_dirent);
 }
+#endif
 
 void cd(const char * s)
 {
@@ -478,6 +492,7 @@ void del(const char * s)
 	writesector(cur_sect, sect);
 }
 
+#if 0 // debugging
 void cat(const char * s)
 {
 	// find file
@@ -491,6 +506,7 @@ void cat(const char * s)
 	
 	send_char('\n');
 }
+#endif
 
 char exists(const char * s)
 {
@@ -517,8 +533,9 @@ void touch(const char * s)
 	for (i=0; i<11; i++)
 		cur_line[i] = *n++;
 	
-	// write filesize
+	// write filesize and attrib
 	GET32(cur_line + 0x1c) = 0;
+	cur_line[0x0b] = 0x00;
 	
 	// write EOF as first cluster
 	GET16(cur_line + 0x14) = FAT_EOF>>16;
@@ -647,12 +664,42 @@ char write_start(const char * s, struct fatwrite_t * fwrite)
 	fwrite->sect_i = 0;
 	fwrite->sector_offset = 0;
 	fwrite->size = 0;
-	fwrite->value = 0;
 
 	fwrite->cur_cluster = fwrite->f_cluster = fat_findempty();
 	fwrite->dir = cur_dir.cluster;
 	// lay claim to the cluster
 	fat_writenext(fwrite->cur_cluster, FAT_EOF);
+	
+	return 1;
+}
+
+char write_append(const char * s, struct fatwrite_t * fwrite)
+{
+	fncmp = str_to_fat(s);
+
+	loop_dir(cur_dir.cluster, find_dirent);
+	if (!IS_FILE(ret_file) || IS_SUBDIR(ret_file) || ret_file.size == 0)
+		return 0;
+
+	// save name
+	int i;
+	for (i=0; i<11; i++)
+		fwrite->name[i] = fncmp[i];
+
+	// find end
+	fwrite->f_cluster = ret_file.cluster;
+	loop_file(ret_file.cluster, ret_file.size, loop_file_all);
+
+	// save important data
+	fwrite->sect_i = (ret_file.size%512) ? (ret_file.size%512) : 512;
+	fwrite->sector_offset = ((ret_file.size-1)/512)%fat.sectors_per_cluster;
+	fwrite->size = ret_file.size;
+
+	fwrite->cur_cluster = ret_lcluster;
+	fwrite->dir = cur_dir.cluster;
+
+	// read in buffer
+	readsector(CLUSTER(fwrite->cur_cluster) + fwrite->sector_offset, fwrite->buf);
 	
 	return 1;
 }

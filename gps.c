@@ -1,5 +1,5 @@
 //////////////////////////////////
-//Zach Norris			//
+//Zach Norris (and some Craig)  //
 //This file provides to code to	//
 //initialize the GPS chip and	//
 //to communicate with the GPS	//
@@ -13,7 +13,6 @@
 #include <stdlib.h>
 #include "lcd.h"
 #include "fat32.h"
-#include "camera.h"
 #include "serialgps.h"
 
 #define KML_NAME "log.kml"
@@ -92,16 +91,7 @@ int gps_log_data(char * data, struct gps_location * loc)
 	return 0;
 }
 
-// disable unwanted GPS signals (set rate to 0)
-void gps_disablesignals(void)
-{
-	send_gps("$PSRF103,00,00,00,01*");
-	send_gps("$PSRF103,01,00,00,01*");
-	send_gps("$PSRF103,02,00,00,01*");
-	send_gps("$PSRF103,03,00,00,01*");
-	send_gps("$PSRF103,04,00,01,01*");
-	send_gps("$PSRF103,05,00,00,01*");
-}
+
 
 /* --------------------------------------------------------------- */
 /* Routine for calculating GPS displacement down to 0.5mm accuracy */
@@ -177,14 +167,9 @@ double dm_to_dd(double dm, char nsew)
 const char map_start[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<kml xmlns=\"http://earth.google.com/kml/2.0\">\n<Document>\n<name>Trailview Path</name>\n";
 const char map_end[] = "</Document>\n</kml>";
 const char map_pointstart[] = "<Placemark>\n<description><![CDATA[";
-const char map_pointmiddle[] = "]]></description><name>";
+const char map_pointmiddle[] = "]]></description>\n<name>";
 const char map_pointname[] = "</name>\n<Point>\n<coordinates>";
 const char map_pointend[] = "</coordinates>\n</Point>\n</Placemark>\n\n";
-
-void ftostr(double f, char * buf, int n)
-{
-	
-}
 
 void log_start(struct fatwrite_t * fwrite)
 {
@@ -193,7 +178,9 @@ void log_start(struct fatwrite_t * fwrite)
 
 	// generate a unique name
 	log_num = dir_highestnumbered() + 1;
-	snprintf(name, 13, "%d.kml", log_num);
+	snprintf(name, 13, "%d", log_num);
+
+	lcd_printf("log: #%d\nstarting...", log_num);
 
 	if (mkdir(name)) {
 		lcd_printf("log: error\nname not unique");
@@ -205,45 +192,47 @@ void log_start(struct fatwrite_t * fwrite)
 	// create file
 	del(KML_NAME);
 	touch(KML_NAME);
-	write_start(KML_NAME, fwrite);
 
+	write_start(KML_NAME, fwrite);
 	write_add(fwrite, map_start, sizeof(map_start)-1);
+	write_end(fwrite);
 }
 
 void log_end(struct fatwrite_t * fwrite)
 {
+	write_append(KML_NAME, fwrite);
 	write_add(fwrite, map_end, sizeof(map_end)-1);
-
 	write_end(fwrite);
 	cd("..");
 }
 
-void log_add(struct fatwrite_t * fwrite, struct gps_location * gl, struct gps_displacement * gd)
+const char kml_urlstart[] = "<img src=\"";
+const char kml_urlend[] = "\" width=\"200\">";
+
+void log_add(struct fatwrite_t * fwrite, struct gps_location * gl, struct gps_displacement * gd, const char * img_name)
 {
-	char buf[256];
-	char imgname[15];
+	char buf[64];
 
-	// take photo
-	snprintf(imgname, 15, "%d.jpg", fwrite->value++);
-	//camera_takephoto(imgname);
-
+	write_append(KML_NAME, fwrite);
 	write_add(fwrite, map_pointstart, sizeof(map_pointstart)-1);
 	
 	// add data
-	snprintf(buf, 256, "Speed: %.2fm/s<br>", gl->sog);
+	snprintf(buf, 64, "Speed: %.2fm/s<br><br>", gl->sog);
 	write_add(fwrite, buf, strlen(buf));
-	snprintf(buf, 256, "Displacement: %dm<br><u>Bearings</u><br>Initial: %d<br>Final: %d<br>",
-				(int)gd->magnitude,
-				(int)gd->initial_bearing,
-				(int)gd->final_bearing);
+	snprintf(buf, 64, "<u>From Start:</u><br>Displacement: %dm<br>", (int)gd->magnitude);
 	write_add(fwrite, buf, strlen(buf));
-	snprintf(buf, 256, "<img src=\"%s\" width=\"100\">", imgname);
+	snprintf(buf, 64, "Initial: %d&deg;&nbsp;&nbsp;", (int)gd->initial_bearing);
 	write_add(fwrite, buf, strlen(buf));
+	snprintf(buf, 64, "Final: %d&deg;<br>", (int)gd->final_bearing);
+	write_add(fwrite, buf, strlen(buf));
+	write_add(fwrite, kml_urlstart, sizeof(kml_urlstart)-1);
+	write_add(fwrite, img_name, strlen(img_name));
+	write_add(fwrite, kml_urlend, sizeof(kml_urlend)-1);
 	write_add(fwrite, map_pointmiddle, sizeof(map_pointmiddle)-1);
 	
 	// add time
 	// add date and time
-	snprintf(buf, 128, "%c%c/%c%c/%c%c %c%c:%c%c:%c%c GMT",
+	snprintf(buf, 64, "%c%c/%c%c/%c%c %c%c:%c%c:%c%c GMT",
 			gl->date[2], gl->date[3], gl->date[0], gl->date[1], gl->date[4], gl->date[5],
 			gl->time[0], gl->time[1], gl->time[2], gl->time[3], gl->time[4], gl->time[5]);	
 	write_add(fwrite, buf, strlen(buf));
@@ -254,5 +243,35 @@ void log_add(struct fatwrite_t * fwrite, struct gps_location * gl, struct gps_di
 	write_add(fwrite, buf, strlen(buf));
 	
 	write_add(fwrite, map_pointend, sizeof(map_pointend)-1);
+	write_end(fwrite);
+}
+
+const char * gps_gen_name(unsigned int n)
+{
+	static char buf[16];
+	buf[11] = '.';
+	buf[12] = 'j';
+	buf[13] = 'p';
+	buf[14] = 'g';
+	buf[15] = '\0';
+	int i = 10;
+	do {
+		buf[i] = (n % 10) + '0';
+		n /= 10;
+		i--;
+	} while (n && i >= 0);	
+	
+	return buf + i + 1;
+}
+
+void gps_disable_unwanted(void)
+{
+	// $PSRF103,<msg>,<mode>,<rate>,<cksumEn>*CKSUM<CR><LF>
+	send_gps("$PSRF103,00,00,00,01*");
+	send_gps("$PSRF103,01,00,00,01*");
+	send_gps("$PSRF103,02,00,00,01*");
+	send_gps("$PSRF103,03,00,00,01*");
+	send_gps("$PSRF103,04,00,01,01*");
+	send_gps("$PSRF103,05,00,00,01*");
 }
 

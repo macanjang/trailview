@@ -86,14 +86,14 @@ uint8_t mmc_datatoken(void)
 
 
 /* final clocks and deassert SS line */
-void mmc_clock_and_release(void)
+void mmc_release(void)
 {
 	uint8_t i;
 
 	// at least 8 final clocks
 	for(i=0;i<10;i++) spi_byte(0xff);	
 
-    CS_DEASSERT;
+	CS_DEASSERT;
 }
 
 /* reads a single 512 bytes sector from the SD card */
@@ -106,7 +106,7 @@ int mmc_readsector(uint32_t lba, uint8_t *buffer)
 
 	if (mmc_datatoken() != 0xfe)	// wait for start of block token
 	{
-		 mmc_clock_and_release();	// error
+		 mmc_release();	// error
    		return -1;
 	}
 
@@ -116,7 +116,7 @@ int mmc_readsector(uint32_t lba, uint8_t *buffer)
 	spi_byte(0xff);					// ignore checksum
 	spi_byte(0xff);					// ignore checksum
 
-	mmc_clock_and_release();
+	mmc_release();
 
 	return 0;
 }
@@ -151,7 +151,7 @@ unsigned int mmc_writesector(uint32_t lba, uint8_t *buffer)
 	i = 0xffff;
 	while (!spi_byte(0xff) && --i) ;	// wait for card to finish writing
     
-	mmc_clock_and_release();	// cleanup
+	mmc_release();	// cleanup
 
 	if (!i) return -1;	// timeout error
 
@@ -182,7 +182,7 @@ uint8_t mmc_init(void)
 
 	if (mmc_get() != 1)			// error if bad/no response code
 	{
-	   mmc_clock_and_release();
+	   mmc_release();
 	   return 1;
 	}
 
@@ -197,7 +197,7 @@ uint8_t mmc_init(void)
 	
 	mmc_send_command(SET_BLOCK_LEN, 512);	//set block size to 512
 	
-	mmc_clock_and_release();
+	mmc_release();
 	
 	// increase SPI clock to (Fosc/2)
 	SPCR &= ~3;
@@ -205,3 +205,4 @@ uint8_t mmc_init(void)
 
 	return 0;
 }
+
