@@ -1,3 +1,7 @@
+/* convert.h
+ * Structures and Unions to aid in converting between integer sizes
+ */
+
 #ifndef CONVERT_H
 #define CONVERT_H
 
