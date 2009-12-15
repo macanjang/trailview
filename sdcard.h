@@ -1,3 +1,7 @@
+/* sdcard.h
+ * Implemets a low level mmc/sdcard driver
+ */
+
 #ifndef SDCARD_H
 #define SDCARD_H
 
