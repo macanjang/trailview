@@ -1,3 +1,7 @@
+/* fat32.h
+ * Implements a fat32 filesystem on top of sdcard.c
+ */
+
 #ifndef FAT32_H
 #define FAT32_H
 

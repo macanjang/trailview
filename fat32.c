@@ -1,3 +1,7 @@
+/* fat32.c
+ * Implements a fat32 filesystem on top of sdcard.c
+ */
+
 #include "fat32.h"
 #include "sdcard.h"
 #include "serial.h"

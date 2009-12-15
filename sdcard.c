@@ -1,3 +1,7 @@
+/* sdcard.c
+ * Implemets a low level mmc/sdcard driver
+ */
+
 #include <avr/io.h>
 #include "sdcard.h"
 #include "convert.h"

@@ -1,3 +1,8 @@
+/* gps.h
+ * This file provides to code to initialize the GPS chip and
+ * to communicate with the GPS chip
+ */
+
 #ifndef _GPS_H
 #define _GPS_H
 

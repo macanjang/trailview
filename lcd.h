@@ -1,3 +1,7 @@
+/* lcd.h
+ * Implements a lcd driver for most normal character lcds
+ */
+
 #ifndef LCD_H
 #define LCD_H
 

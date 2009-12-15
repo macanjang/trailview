@@ -1,3 +1,6 @@
+/* camera.h
+ * Contains functions for accessing the camera and taking/saving photos
+ */
 
 #ifndef CAMERA_H
 #define CAMERA_H
