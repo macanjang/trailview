@@ -1,3 +1,6 @@
+/* serialgps.h
+ * Implements communicating with the GPS device over serial
+ */
 
 #ifndef SERIAL_H
 #define SERIAL_H
