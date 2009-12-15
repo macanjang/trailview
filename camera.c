@@ -1,3 +1,7 @@
+/* camera.c
+ * Contains functions for accessing the camera and taking/saving photos
+ */
+
 #include <avr/io.h>
 #include "camera.h"
 #include "lcd.h"

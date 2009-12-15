@@ -1,10 +1,7 @@
-//////////////////////////////////
-//Zach Norris (and some Craig)  //
-//This file provides to code to	//
-//initialize the GPS chip and	//
-//to communicate with the GPS	//
-//chip				//
-//////////////////////////////////
+/* gps.c
+ * This file provides to code to initialize the GPS chip and
+ * to communicate with the GPS chip
+ */
 
 #include <stdio.h>
 #include <string.h>

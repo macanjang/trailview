@@ -1,5 +1,6 @@
-/* Trailview GPS logger system
- * Craig Harrison & Zach Norrison
+/* main.c
+ * Trailview GPS logger system
+ * Craig Harrison & Zach Norris
  * 12/13/2009
  */
  

@@ -1,3 +1,7 @@
+/* lcd.c
+ * Implements a lcd driver for most normal character lcds
+ */
+
 #include <avr/io.h>
 
 #define F_CPU 8E6  // 8 MHz
