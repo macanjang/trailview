@@ -1,3 +1,7 @@
+/* serialgps.c
+ * Implements communicating with the GPS device over serial
+ */
+
 #include <avr/io.h>
 #include "serialgps.h"
 #include "gps.h"
