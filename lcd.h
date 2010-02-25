@@ -7,7 +7,7 @@
 
 void lcd_init(void);
 
-/* supports %s, %d, %%, and \n */
+/* supports %s, %d, %c, %%, and \n */
 void lcd_printf(const char *fmt, ...);
 
 void lcd_wcommand(unsigned char c);

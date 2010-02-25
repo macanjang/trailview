@@ -48,13 +48,26 @@ int readsector(uint32_t lba, uint8_t *buffer)
 	return r;
 }
 
-/* abstract writesector with error checking */
+/* abstract writesector with error checking
+ * if buffer == NULL it should clear the sector
+ */
 int writesector(uint32_t lba, uint8_t *buffer)
 {
 	int r;
 	if ((r = mmc_writesector(lba, buffer)))
 		lcd_printf("SD error:\nwriting sector");
 	return r;
+}
+
+/* clear cluster */
+void clear_cluster(uint32_t cluster)
+{
+	uint32_t csect = CLUSTER(cluster);
+	
+	int i;
+	for (i=0; i<fat.sectors_per_cluster; i++) {
+		writesector(csect + i, NULL);
+	}	
 }
 
 /* string conversion function */
@@ -521,7 +534,9 @@ char exists(const char * s)
 	return IS_FILE(ret_file);
 }
 
-/* doesn't check whether the file already exists */
+/* creates a new file of size 0
+ * doesn't check whether the file already exists
+ */
 void touch(const char * s)
 {
 	const char* n = str_to_fat(s);
@@ -564,6 +579,7 @@ void touch(const char * s)
 				cluster = fat_findempty();
 				fat_writenext(oldcluster, cluster);
 				fat_writenext(cluster, FAT_EOF);
+				clear_cluster(cluster);
 			}
 			
 			// read new sector
@@ -574,6 +590,7 @@ void touch(const char * s)
 
 		// write end of dir
 		cur_line[0] = 0x00;
+		
 	}
 
 	// whatever just happened, the sector needs to be synced
@@ -596,6 +613,7 @@ char mkdir(const char * dirname)
 	// get an empty cluster
 	uint32_t tmp_fat = fat_findempty();
 	fat_writenext(tmp_fat, FAT_EOF);
+	clear_cluster(tmp_fat);
 	
 	// set directory bits and point to cluster
 	GET16(cur_line + 0x14) = tmp_fat>>16;
@@ -608,8 +626,7 @@ char mkdir(const char * dirname)
 
 	// create "."
 	cur_sect = CLUSTER(tmp_fat);
-	sect[0] = 0x00;
-	writesector(cur_sect, sect);
+	readsector(cur_sect, sect);
 	
 	cur_dir.cluster = tmp_fat;
 	touch(".");

@@ -126,6 +126,7 @@ int mmc_readsector(uint32_t lba, uint8_t *buffer)
 }
 
 /* write a single 512 byte sector to the SD card */
+/* if buffer == NULL, then it clears the sector */
 unsigned int mmc_writesector(uint32_t lba, uint8_t *buffer)
 {
 	uint16_t i;
@@ -140,8 +141,14 @@ unsigned int mmc_writesector(uint32_t lba, uint8_t *buffer)
 
 	spi_byte(0xfe);	// send start block token
 
-	for (i=0;i<512;i++)	// write sector data
-    	spi_byte(*buffer++);
+	// if given a buffer, write it
+	if (buffer) {
+		for (i=0;i<512;i++)	// write sector data
+			spi_byte(*buffer++);
+    } else { // if not given a buffer, clear it
+    	for (i=0;i<512;i++)	// write sector data
+			spi_byte(0x00);
+    }
 
 	spi_byte(0xff);	// ignore checksum
 	spi_byte(0xff);	// ignore checksum

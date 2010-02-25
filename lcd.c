@@ -106,7 +106,7 @@ int lcd_print(const char *s)
 	return r;
 }
 
-/* supports %s, %d, %%, and \n */
+/* supports %s, %d, %c, %%, and \n */
 void lcd_printf(const char *fmt, ...)
 {
 	lcd_go_line(0);
