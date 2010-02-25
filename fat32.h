@@ -79,5 +79,6 @@ char print_dirent(struct fat32dirent_t* de);
 void print_sect(uint8_t* s, int n);
 char find_dirent(struct fat32dirent_t* de);
 char find_emptyslot(struct fat32dirent_t* de);
+void clear_cluster(uint32_t cluster);
 
 #endif
