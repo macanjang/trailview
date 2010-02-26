@@ -66,7 +66,7 @@ void clear_cluster(uint32_t cluster)
 	
 	int i;
 	for (i=0; i<fat.sectors_per_cluster; i++) {
-		writesector(csect + i, NULL);
+		writesector(csect + i, 0);
 	}	
 }
 
